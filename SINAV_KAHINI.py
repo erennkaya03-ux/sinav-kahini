@@ -42,7 +42,6 @@ if "api_key_kayitli" not in st.session_state:
     st.session_state["api_key_kayitli"] = ""
 
 # --- MÜFREDAT VERİTABANI (SINIFLARA GÖRE AYRILMIŞ HAVUZ) ---
-# Ortak dersler ve gönüllülük çalışmaları filtrelenmiştir.
 MÜFREDAT_HAVUZU = {
     "1. SINIF DERSLERİ": [
         "İktisada Giriş I", "Genel Hukuk", "Bilgisayar Kullanımı ve Ofis Uygulamaları", 
@@ -76,14 +75,14 @@ MÜFREDAT_HAVUZU = {
     ]
 }
 
-# Başlangıçta boş kalmaması için ilk açılış dersleri
+# Başlangıç varsayılan dersleri
 if "secilen_dersler" not in st.session_state:
     st.session_state["secilen_dersler"] = ["Finansal Muhasebe I", "Finansal Muhasebe II", "Ticaret Hukuku"]
 
 # --- TEK DÜZEN HESAP PLANI VERİTABANI ---
 HESAP_PLANI = {"100": "KASA", "101": "ALINAN ÇEKLER", "102": "BANKALAR", "103": "VERİLEN ÇEKLER (-)", "120": "ALICILAR", "121": "ALACAK SENETLERİ", "153": "TİCARİ MALLAR", "191": "İNDİRİLECEK KDV", "254": "TAŞITLAR", "255": "DEMİRBAŞLAR", "257": "BİRİKMİŞ AMORTİSMANLAR (-)", "320": "SATICILAR", "321": "BORÇ SENETLERİ", "391": "HESAPLANAN KDV", "500": "SERMAYE", "600": "YURTİÇİ SATIŞLAR", "621": "STMM (-)", "770": "GENEL YÖNETİM GİDERLERİ"}
 
-# --- GİRİŞ KONTROLÜ (KEY YOKSA SADECE BU EKRAN GÖRÜNÜR) ---
+# --- GİRİŞ KONTROLÜ ---
 if not st.session_state["api_key_kayitli"]:
     st.title("🔮 Sınav Kahini Giriş")
     st.subheader("Hoş geldiniz")
@@ -96,43 +95,12 @@ if not st.session_state["api_key_kayitli"]:
             st.rerun()
         else:
             st.error("Lütfen geçerli bir anahtar girin.")
-            
-    st.info("💡 **Nasıl Ücretsiz Şifre Alırım?**\n1. [Google AI Studio](https://aistudio.google.com/) sitesine git.\n2. Giriş yapıp **'Get API Key'** butonuna bas.\n3. Kodu kopyala ve yukarıdaki kutuya yapıştırın.")
-
-# --- UYGULAMA ANA EKRANI ---
 else:
     genai.configure(api_key=st.session_state["api_key_kayitli"])
     model = genai.GenerativeModel('gemini-2.5-flash')
     
-    col_baslik, col_ayar = st.columns([2, 1])
+    st.title("🔮 Sınav Kahini")
     
-    with col_baslik:
-        st.title("🔮 Sınav Kahini")
-        
-    with col_ayar:
-        # Tıklandığında açılan esnek mini pencere mekanizması
-        with st.popover("➕ Ders Ekle/Çıkar"):
-            st.markdown("### 📚 Müfredat Listesi")
-            st.caption("Dönem derslerinizi işaretleyip kaydedin:")
-            
-            gecici_secimler = []
-            
-            # Dersleri sınıflarına göre başlıklandırarak döngüye alıyoruz
-            for sinif_adi, ders_listesi in MÜFREDAT_HAVUZU.items():
-                st.markdown(f"<div class='ders-baslik'>{sinif_adi}</div>", unsafe_allow_html=True)
-                for ders in ders_listesi:
-                    durum = ders in st.session_state["secilen_dersler"]
-                    if st.checkbox(ders, value=durum, key=f"pop_{ders}"):
-                        gecici_secimler.append(ders)
-            
-            st.markdown("---")
-            if st.button("Listeyi Güncelle", type="primary", use_container_width=True):
-                if gecici_secimler:
-                    st.session_state["secilen_dersler"] = gecici_secimler
-                    st.rerun()
-                else:
-                    st.error("En az bir ders seçilmelidir.")
-
     if st.button("🔒 Oturumu Kapat / Key Değiştir", use_container_width=True):
         st.session_state["api_key_kayitli"] = ""
         st.rerun()
@@ -166,16 +134,38 @@ else:
         else:
             st.caption("Henüz yüklenmiş bir ders notu bulunmamaktadır.")
 
-    # SEKME 2: NOT VE PDF YÜKLEME
+    # SEKME 2: NOT VE PDF YÜKLEME (Ders ekle/çıkar buraya taşındı)
     with sekme2:
         st.subheader("📢 Ders Notu & PDF & Fotoğraf Yükle")
-        ders_adi = st.selectbox("Ders:", options=st.session_state["secilen_dersler"], key="mob_ders")
+        
+        # Taşınan Ders Yönetim Paneli
+        with st.popover("➕ Dönem Derslerini Düzenle (Ekle/Çıkar)"):
+            st.markdown("### 📚 Müfredat Listesi")
+            st.caption("Bu dönem aldığınız dersleri işaretleyin:")
+            gecici_secimler = []
+            for sinif_adi, ders_listesi in MÜFREDAT_HAVUZU.items():
+                st.markdown(f"<div class='ders-baslik'>{sinif_adi}</div>", unsafe_allow_html=True)
+                for ders in ders_listesi:
+                    durum = ders in st.session_state["secilen_dersler"]
+                    if st.checkbox(ders, value=durum, key=f"pop_{ders}"):
+                        gecici_secimler.append(ders)
+            
+            st.markdown("---")
+            if st.button("Listeyi Güncelle", type="primary", use_container_width=True):
+                if gecici_secimler:
+                    st.session_state["secilen_dersler"] = gecici_secimler
+                    st.rerun()
+                else:
+                    st.error("En az bir ders seçilmelidir.")
+                    
+        st.markdown("---")
+        
+        ders_adi = st.selectbox("İşlem Yapılacak Ders:", options=st.session_state["secilen_dersler"], key="mob_ders")
         secilen_hafta = st.number_input("Hafta:", min_value=1, max_value=14, value=1, key="mob_hafta")
         
         st.markdown("### 1. Yazılı Not veya Tahta Fotoğrafı")
         ham_not = st.text_area("📝 Not ekleyin veya yapıştırın:", placeholder="Önemli notlar...", height=80)
-        
-        yuklenen_foto = st.file_uploader("📸 Tahta Fotoğrafı Yükle (Galeri/Dosya):", type=["png", "jpg", "jpeg"])
+        yuklenen_foto = st.file_uploader("📸 Tahta Fotoğrafı Yükle:", type=["png", "jpg", "jpeg"])
         
         st.markdown("---")
         st.markdown("### 2. PDF Kitap/Slayt Özetleme")
@@ -189,26 +179,21 @@ else:
             
             if ham_not:
                 st.session_state["ders_notlari"][ders_adi][secilen_hafta].append({"tip": "metin", "icerik": ham_not})
-            
             if yuklenen_foto:
                 st.session_state["ders_notlari"][ders_adi][secilen_hafta].append({"tip": "fotograf", "icerik": yuklenen_foto.read()})
-            
             if yuklenen_pdf:
-                with st.spinner("📄 PDF okunuyor ve yapay zeka tarafından özetleniyor..."):
+                with st.spinner("📄 PDF okunuyor..."):
                     try:
                         reader = PdfReader(io.BytesIO(yuklenen_pdf.read()))
                         pdf_metni = ""
                         for sayfa in reader.pages[:10]:
                             pdf_metni += sayfa.extract_text() + "\n"
-                        
-                        komut = f"Aşağıdaki ders notu PDF metnini, bir üniversite öğrencisinin sınavda en çok işine yarayacak şekilde, önemli kavramları, formülleri ve muhasebe kodlarını vurgulayarak özetle:\n\n{pdf_metni}"
+                        komut = f"Aşağıdaki ders notu PDF metnini özetle:\n\n{pdf_metni}"
                         yanit = model.generate_content(komut)
-                        
                         st.session_state["ders_notlari"][ders_adi][secilen_hafta].append({"tip": "metin", "icerik": f"📄 **PDF ÖZETİ:**\n\n{yanit.text}"})
                     except Exception as e:
-                        st.error(f"PDF Özetleme Hatası: {e}")
-            
-            st.success("Tüm yüklemeler başarıyla arşive işlendi! 📁")
+                        st.error(f"Hata: {e}")
+            st.success("Başarıyla arşive işlendi! 📁")
             st.rerun()
 
     # SEKME 3: YAPAY ZEKA SORU ODASI
@@ -218,15 +203,15 @@ else:
         zorluk = st.select_slider("Zorluk Seviyesi:", options=["Kolay", "Orta", "Zor", "Hocanın Saplama Modu"], key="mob_zorluk")
         
         st.markdown("---")
-        ornek_soru = st.text_area("✍️ Örnek Soru Yazınız (Opsiyonel):", placeholder="Kendi sorunuzu buraya yazarsanız yapay zeka bunu çözer. Boş bırakırsanız kendisi sıfırdan soru üretir...", height=100)
+        ornek_soru = st.text_area("✍️ Örnek Soru Yazınız (Opsiyonel):", placeholder="Kendi sorunuzu yazın veya boş bırakın...", height=100)
         
         if st.button("🔮 Soru Hazırla / Çözdür", use_container_width=True):
             if ornek_soru:
-                komut = f"Sen üniversitede {ders_kontrol} dersi veren bir hocasın. Öğrencinin sana gönderdiği şu soruyu adım adım, üniversite sınav formatına uygun şekilde çok detaylıca çöz ve anlat. Varsa yevmiye kayıtlarını ve muhasebe mantığını tek tek göster:\n\n{ornek_soru}"
+                komut = f"Sen üniversitede {ders_kontrol} dersi veren bir hocasın. Soruyu detaylıca çöz:\n\n{ornek_soru}"
             else:
-                komut = f"Sen üniversitede {ders_kontrol} dersi veren bir hocasın. {zorluk} seviyesinde üniversite sınavına uygun orijinal bir soru üret ve hemen altına '---' koyarak adım adım çok detaylı çözümünü yaz."
+                komut = f"Sen üniversitede {ders_kontrol} dersi veren bir hocasın. {zorluk} seviyesinde orijinal bir soru ve çözümü üret."
             
-            with st.spinner("🔮 Sihirli küre soruyu inceliyor..."):
+            with st.spinner("🔮 Sorunuz hazırlanıyor..."):
                 try:
                     response = model.generate_content(komut)
                     st.session_state["mob_soru"] = response.text
@@ -259,42 +244,4 @@ else:
             harf_notu = "FF (Final Barajı Altı)"
             durum = "Kaldınız ❌"
             renk = st.error
-        elif donem_notu <= 40:
-            harf_notu = "FF"
-            durum = "Kaldınız ❌"
-            renk = st.error
-        elif fark >= 20:
-            harf_notu = "AA"
-            durum = "Başarıyla geçtiniz! 🚀"
-            renk = st.success
-        elif fark >= 12:
-            harf_notu = "BA"
-            durum = "Rahatlıkla geçtiniz! 😎"
-            renk = st.success
-        elif fark >= 5:
-            harf_notu = "BB"
-            durum = "İyi bir notla geçtiniz! 🙌"
-            renk = st.success
-        elif fark >= -2:
-            harf_notu = "CB"
-            durum = "Geçtiniz! 👍"
-            renk = st.success
-        elif fark >= -8:
-            harf_notu = "CC"
-            durum = "Sınırda geçtiniz! 🎯"
-            renk = st.success
-        elif fark >= -15:
-            harf_notu = "DC"
-            durum = "Koşullu Geçtiniz (Ortalama 2.00 üzeriyse)."
-            renk = st.warning
-        elif fark >= -20:
-            harf_notu = "DD"
-            durum = "Koşullu Geçtiniz (Ortalama 2.00 üzeriyse)."
-            renk = st.warning
-        else:
-            harf_notu = "FF"
-            durum = "Kaldınız ❌"
-            renk = st.error
-
-        st.metric(label="📊 Hesaplanan Dönem Sonu Notu:", value=f"{round(donem_notu, 1)}")
-        renk(f"Tahmini Harf Notu: **{harf_notu}** — {durum}")
+        elif donem_notu <= 40
