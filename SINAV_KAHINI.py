@@ -176,4 +176,47 @@ else:
             harf_notu = "FF (Final Barajı Altı)"
             durum = "Kaldın kanka ❌"
             renk = st.error
-        elif donem_notu <=
+        elif donem_notu <= 40:
+            harf_notu = "FF"
+            durum = "Kaldın kanka ❌"
+            renk = st.error
+        elif fark >= 20:
+            harf_notu = "AA"
+            durum = " canavar gibi geçtin! 🚀"
+            renk = st.success
+        elif fark >= 12:
+            harf_notu = "BA"
+            durum = " çok rahat geçtin! 😎"
+            renk = st.success
+        elif fark >= 5:
+            harf_notu = "BB"
+            durum = " güzel notla geçtin! 🙌"
+            renk = st.success
+        elif fark >= -2:
+            harf_notu = "CB"
+            durum = " geçtin kanka! 👍"
+            renk = st.success
+        elif fark >= -8:
+            harf_notu = "CC"
+            durum = " sınırda geçtin kanka! 🎯"
+            renk = st.success
+        elif fark >= -15:
+            harf_notu = "DC"
+            durum = " Koşullu Geçtin (Ortalaman 2.00 üzeriyse)."
+            renk = st.warning
+        elif fark >= -20:
+            harf_notu = "DD"
+            durum = " Koşullu Geçtin (Ortalaman 2.00 üzeriyse)."
+            renk = st.warning
+        else:
+            harf_notu = "FF"
+            durum = "Kaldın kanka ❌"
+            renk = st.error
+
+        st.metric(label="📊 Hesaplanan Dönem Sonu Notun:", value=f"{round(donem_notu, 1)}")
+        renk(f"Tahmini Harf Notun: **{harf_notu}** — {durum}")
+        
+        st.markdown("---")
+        # İstediğin Kısa ve Öz Uyarı Notları kanka:
+        st.warning("⚠️ **NOT:** Vize ve final ortalaması 40 ve altındaysa veya final notu 45'in altındaysa sistem otomatik olarak FF verir kanka.")
+        st.error("🚨 **!!DİKKAT:** Bu hesaplama matematiksel bir tahmindir. Kesin harf notu sonucu için lütfen OBS sistemine giriniz kanka.")
