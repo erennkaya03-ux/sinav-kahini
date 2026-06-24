@@ -52,14 +52,13 @@ if not st.session_state["api_key_kayitli"]:
             
     st.info("💡 **Nasıl Ücretsiz Şifre Alırım?**\n1. [Google AI Studio](https://aistudio.google.com/) sitesine git.\n2. Giriş yapıp **'Get API Key'** butonuna bas.\n3. Kodu kopyala ve yukarıdaki kutuya yapıştır!")
 
-# --- UYGULAMA ANA EKRANI (GİRİŞ YAPILDIKTAN SONRA KEY KUTUSU GİZLENİR) ---
+# --- UYGULAMA ANA EKRANI ---
 else:
     genai.configure(api_key=st.session_state["api_key_kayitli"])
     model = genai.GenerativeModel('gemini-2.5-flash')
     
     st.title("🔮 Sınav Kahini Mobil")
     
-    # Oturumu kapatma seçeneği en üstte temiz bir buton olarak kalıyor kanka
     if st.button("🔒 Oturumu Kapat / Key Değiştir", use_container_width=True):
         st.session_state["api_key_kayitli"] = ""
         st.rerun()
@@ -88,7 +87,7 @@ else:
         else:
             st.caption("Henüz yüklenmiş bir ders notu yok kanka.")
 
-    # SEKME 2: NOT VE PDF YÜKLEME (KAMERASIZ - SADECE GALERİ VE PDF)
+    # SEKME 2: NOT VE PDF YÜKLEME
     with sekme2:
         st.subheader("📢 Ders Notu & PDF & Fotoğraf Yükle")
         ders_adi = st.selectbox("Ders:", ["Finansal Muhasebe", "Ticaret Hukuku", "Makro İktisat"], key="mob_ders")
@@ -97,7 +96,6 @@ else:
         st.markdown("### 1. Yazılı Not veya Tahta Fotoğrafı")
         ham_not = st.text_area("📝 Hocanın lafını karala veya yapıştır:", placeholder="Hoca buraya yıldız koydu...", height=80)
         
-        # Kamera tamamen kalktı kanka, sadece galeri/dosya seçimi var
         yuklenen_foto = st.file_uploader("📸 Tahta Fotoğrafı Yükle (Galeri/Dosya):", type=["png", "jpg", "jpeg"])
         
         st.markdown("---")
@@ -116,13 +114,12 @@ else:
             if yuklenen_foto:
                 st.session_state["ders_notlari"][ders_adi][secilen_hafta].append({"tip": "fotograf", "icerik": yuklenen_foto.read()})
             
-            # PDF Özetleme Motoru kanka
             if yuklenen_pdf:
                 with st.spinner("📄 PDF okunuyor ve yapay zeka tarafından özetleniyor..."):
                     try:
                         reader = PdfReader(io.BytesIO(yuklenen_pdf.read()))
                         pdf_metni = ""
-                        for sayfa in reader.pages[:10]: # Performans için ilk 10 sayfa kanka
+                        for sayfa in reader.pages[:10]:
                             pdf_metni += sayfa.extract_text() + "\n"
                         
                         komut = f"Aşağıdaki ders notu PDF metnini, bir üniversite öğrencisinin sınavda en çok işine yarayacak şekilde, önemli kavramları, formülleri ve muhasebe kodlarını vurgulayarak özetle kanka:\n\n{pdf_metni}"
@@ -135,7 +132,7 @@ else:
             st.success("Tüm yüklemeler başarıyla arşive işlendi! 📁")
             st.rerun()
 
-    # SEKME 3: YAPAY ZEKA SORU ODASI (ÖRNEK SORU GİRİŞLİ)
+    # SEKME 3: YAPAY ZEKA SORU ODASI
     with sekme3:
         st.subheader("📝 Yapay Zeka Soru Odası")
         ders_kontrol = st.selectbox("Ders Seçin:", ["Finansal Muhasebe", "Ticaret Hukuku", "Makro İktisat"], key="kahin_mob_ders")
@@ -160,7 +157,7 @@ else:
         if "mob_soru" in st.session_state:
             st.markdown(st.session_state["mob_soru"])
 
-    # SEKME 4: HARF NOTU VE FİNAL SİMÜLATÖRÜ (TAM SÜRÜM)
+    # SEKME 4: HARF NOTU VE FİNAL SİMÜLATÖRÜ
     with sekme4:
         st.subheader("📊 Harf Notu & Geçme Simülatörü")
         vize_notu = st.slider("Vize Notun?", min_value=0, max_value=100, value=40, key="mob_vize")
@@ -169,49 +166,14 @@ else:
         
         st.markdown("---")
         
-        # Gerçek çan eğrisi bazlı harf notu simülasyonu kanka
         vize_katki = vize_notu * 0.4
         final_katki = muhtemel_final * 0.6
         donem_notu = vize_katki + final_katki
-        
         fark = donem_notu - sinif_ort
         
-        if muhtemel_final < 45: # Üniversite barajı kanka
+        # Harf Notu Karar Mantığı
+        if muhtemel_final < 45:
             harf_notu = "FF (Final Barajı Altı)"
             durum = "Kaldın kanka ❌"
             renk = st.error
-        elif fark >= 20:
-            harf_notu = "AA"
-            durum = " canavar gibi geçtin! 🚀"
-            renk = st.success
-        elif fark >= 12:
-            harf_notu = "BA"
-            durum = " çok rahat geçtin! 😎"
-            renk = st.success
-        elif fark >= 5:
-            harf_notu = "BB"
-            durum = " güzel notla geçtin! 🙌"
-            renk = st.success
-        elif fark >= -2:
-            harf_notu = "CB"
-            durum = " geçtin kanka! 👍"
-            renk = st.success
-        elif fark >= -8:
-            harf_notu = "CC"
-            durum = " sınırda geçtin kanka! 🎯"
-            renk = st.success
-        elif fark >= -15:
-            harf_notu = "DC"
-            durum = " Koşullu Geçtin (Ortalaman 2.00 üzeriyse)."
-            renk = st.warning
-        elif fark >= -20:
-            harf_notu = "DD"
-            durum = " Koşullu Geçtin (Ortalaman 2.00 üzeriyse)."
-            renk = st.warning
-        else:
-            harf_notu = "FF"
-            durum = "Kaldın kanka ❌"
-            renk = st.error
-
-        st.metric(label="📊 Hesaplanan Dönem Sonu Notun:", value=f"{round(donem_notu, 1)}")
-        renk(f"Tahmini Harf Notun: **{harf_notu}** — {durum}")
+        elif donem_notu <=
