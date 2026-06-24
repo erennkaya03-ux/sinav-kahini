@@ -134,7 +134,7 @@ else:
         else:
             st.caption("Henüz yüklenmiş bir ders notu bulunmamaktadır.")
 
-    # SEKME 2: NOT VE PDF YÜKLEME (Ders ekle/çıkar buraya taşındı)
+    # SEKME 2: NOT VE PDF YÜKLEME
     with sekme2:
         st.subheader("📢 Ders Notu & PDF & Fotoğraf Yükle")
         
@@ -200,48 +200,4 @@ else:
     with sekme3:
         st.subheader("📝 Yapay Zeka Soru Odası")
         ders_kontrol = st.selectbox("Ders Seçin:", options=st.session_state["secilen_dersler"], key="kahin_mob_ders")
-        zorluk = st.select_slider("Zorluk Seviyesi:", options=["Kolay", "Orta", "Zor", "Hocanın Saplama Modu"], key="mob_zorluk")
-        
-        st.markdown("---")
-        ornek_soru = st.text_area("✍️ Örnek Soru Yazınız (Opsiyonel):", placeholder="Kendi sorunuzu yazın veya boş bırakın...", height=100)
-        
-        if st.button("🔮 Soru Hazırla / Çözdür", use_container_width=True):
-            if ornek_soru:
-                komut = f"Sen üniversitede {ders_kontrol} dersi veren bir hocasın. Soruyu detaylıca çöz:\n\n{ornek_soru}"
-            else:
-                komut = f"Sen üniversitede {ders_kontrol} dersi veren bir hocasın. {zorluk} seviyesinde orijinal bir soru ve çözümü üret."
-            
-            with st.spinner("🔮 Sorunuz hazırlanıyor..."):
-                try:
-                    response = model.generate_content(komut)
-                    st.session_state["mob_soru"] = response.text
-                except Exception as e:
-                    st.error(f"Hata: {e}")
-                    
-        if "mob_soru" in st.session_state:
-            st.markdown(st.session_state["mob_soru"])
-
-    # SEKME 4: HARF NOTU VE FİNAL SİMÜLATÖRÜ
-    with sekme4:
-        st.subheader("📊 Harf Notu & Geçme Simülatörü")
-        
-        st.error("🚨 **!!DİKKAT:** Bu hesaplama matematiksel bir tahmindir. Kesin harf notu sonucu için lütfen OBS sistemine giriniz.")
-        st.warning("⚠️ **NOT:** Vize ve final ortalaması 40 ve altındaysa veya final notu 45'in altındaysa sistem otomatik olarak FF verir.")
-        st.markdown("---")
-        
-        vize_notu = st.slider("Vize Notu?", min_value=0, max_value=100, value=40, key="mob_vize")
-        sinif_ort = st.slider("Sınıf Ortalaması?", min_value=20, max_value=80, value=45, key="mob_ort")
-        muhtemel_final = st.slider("🔮 Muhtemelen Final Notu Kaç Olur?", min_value=0, max_value=100, value=50, key="mob_muhtemel_final")
-        
-        st.markdown("---")
-        
-        vize_katki = vize_notu * 0.4
-        final_katki = muhtemel_final * 0.6
-        donem_notu = vize_katki + final_katki
-        fark = donem_notu - sinif_ort
-        
-        if muhtemel_final < 45:
-            harf_notu = "FF (Final Barajı Altı)"
-            durum = "Kaldınız ❌"
-            renk = st.error
-        elif donem_notu <= 40
+        zorluk = st.select_slider("Zorluk Seviyesi:", options=["Kolay", "Orta", "Zor", "Hocanın Saplama Modu"], key="mob_zor
