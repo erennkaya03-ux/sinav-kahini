@@ -10,7 +10,6 @@ st.set_page_config(page_title="Sınav Kahini", page_icon="🔮", layout="centere
 # --- MOBİL ARAYÜZ STİL AYARLARI (CSS) ---
 st.markdown("""
 <style>
-    /* Telefonlarda input alanlarını ve butonları daha belirgin yap */
     .stButton>button {
         width: 100% !important;
         border-radius: 12px !important;
@@ -20,7 +19,6 @@ st.markdown("""
     .stTextArea textarea {
         border-radius: 10px !important;
     }
-    /* Mobil sekmeleri daha geniş ve dokunmatik yap */
     button[data-baseweb="tab"] {
         font-size: 14px !important;
         padding: 10px 5px !important;
@@ -32,32 +30,45 @@ st.markdown("""
 if "ders_notlari" not in st.session_state:
     st.session_state["ders_notlari"] = {}
 
-if "baslangic_tarihi" not in st.session_state:
-    st.session_state["baslangic_tarihi"] = datetime.now()
-
-if "gecici_pdf_ozeti" not in st.session_state:
-    st.session_state["gecici_pdf_ozeti"] = None
+if "api_key_kayitli" not in st.session_state:
+    st.session_state["api_key_kayitli"] = ""
 
 # --- TEK DÜZEN HESAP PLANI VERİTABANI ---
 HESAP_PLANI = {"100": "KASA", "101": "ALINAN ÇEKLER", "102": "BANKALAR", "103": "VERİLEN ÇEKLER (-)", "120": "ALICILAR", "121": "ALACAK SENETLERİ", "153": "TİCARİ MALLAR", "191": "İNDİRİLECEK KDV", "254": "TAŞITLAR", "255": "DEMİRBAŞLAR", "257": "BİRİKMİŞ AMORTİSMANLAR (-)", "320": "SATICILAR", "321": "BORÇ SENETLERİ", "391": "HESAPLANAN KDV", "500": "SERMAYE", "600": "YURTİÇİ SATIŞLAR", "621": "STMM (-)", "770": "GENEL YÖNETİM GİDERLERİ"}
 
-st.title("🔮 Sınav Kahini Mobil")
-
-# Mobil Güvenlik Girişi (Ana Ekranda En Üstte)
-user_api_key = st.text_input("🔑 Gemini API Key Girin:", type="password", help="Google AI Studio'dan aldığın ücretsiz anahtarı buraya yapıştır kanka.")
-
-if user_api_key:
-    genai.configure(api_key=user_api_key)
-    model = genai.GenerativeModel('gemini-2.5-flash')
-else:
-    st.warning("⚠️ Sistemi çalıştırmak için lütfen yukarıya API anahtarını yapıştır kanka.")
-
-# KORUMA KALKANI: Şifre yoksa alt sekmeleri yükleme
-if not user_api_key:
+# --- GİRİŞ KONTROLÜ (KEY YOKSA BU EKRAN ÇIKACAK) ---
+if not st.session_state["api_key_kayitli"]:
+    st.title("🔮 Sınav Kahini Giriş")
+    st.subheader("Hoş geldin kanka!")
+    girilen_key = st.text_input("🔑 Gemini API Key Girin:", type="password", help="Google AI Studio'dan aldığın ücretsiz anahtarı buraya yapıştır kanka.")
+    
+    if st.button("Sisteme Giriş Yap 🚀", use_container_width=True):
+        if girilen_key:
+            st.session_state["api_key_kayitli"] = girilen_key
+            st.success("Giriş başarılı! Uygulama açılıyor...")
+            st.rerun()
+        else:
+            st.error("Lütfen geçerli bir anahtar gir kanka!")
+            
     st.info("💡 **Nasıl Ücretsiz Şifre Alırım?**\n1. [Google AI Studio](https://aistudio.google.com/) sitesine git.\n2. Giriş yapıp **'Get API Key'** butonuna bas.\n3. Kodu kopyala ve yukarıdaki kutuya yapıştır!")
+
+# --- UYGULAMA ANA EKRANI (GİRİŞ YAPILDIYSA KEY KUTUSU OLMADAN AÇILIR) ---
 else:
+    # Yapay zekayı arkada yapılandırıyoruz
+    genai.configure(api_key=st.session_state["api_key_kayitli"])
+    model = genai.GenerativeModel('gemini-2.5-flash')
+    
+    st.title("🔮 Sınav Kahini Mobil")
+    
+    # Çıkış Yap butonu (En altta kalabalık etmesin diye ufak bir seçenek veya üstte dursun)
+    if st.button("🔒 Oturumu Kapat / Key Değiştir", use_container_width=True):
+        st.session_state["api_key_kayitli"] = ""
+        st.rerun()
+
+    st.markdown("---")
+
     # --- MOBİL ÜST SEKME SİSTEMİ ---
-    sekme1, sekme2, sekme3, sekme4 = st.tabs(["📁 Arşiv", "📢 Not Yükle", "📝 Soru Odası", "📊 Hesapla"])
+    sekme1, sekme2, sekme3, sekme4 = st.tabs(["📁 Arşiv", "📢 Not/PDF Yükle", "📝 Soru Odası", "📊 Hesapla"])
 
     # SEKME 1: DERS ARŞİVİ
     with sekme1:
@@ -78,39 +89,72 @@ else:
         else:
             st.caption("Henüz yüklenmiş bir ders notu yok kanka.")
 
-    # SEKME 2: HOCANIN AĞZINDAN (NOT YÜKLEME)
+    # SEKME 2: NOT VE PDF YÜKLEME (KAMERA DAHİL)
     with sekme2:
-        st.subheader("📢 Hocanın Ağzından")
+        st.subheader("📢 Ders Notu & PDF & Fotoğraf Yükle")
         ders_adi = st.selectbox("Ders:", ["Finansal Muhasebe", "Ticaret Hukuku", "Makro İktisat"], key="mob_ders")
         secilen_hafta = st.number_input("Hafta:", min_value=1, max_value=14, value=1, key="mob_hafta")
         
-        st.markdown("---")
-        ham_not = st.text_area("📝 Hocanın lafını karala veya yapıştır:", placeholder="Hoca buraya yıldız koydu...", height=100)
-        yuklenen_foto = st.file_uploader("📸 Tahta Fotoğrafı Yükle:", type=["png", "jpg", "jpeg"])
+        st.markdown("### 1. Yazılı Not veya Tahta Fotoğrafı")
+        ham_not = st.text_area("📝 Hocanın lafını karala veya yapıştır:", placeholder="Hoca buraya yıldız koydu...", height=80)
         
-        if st.button("🚀 Havuza Gönder", use_container_width=True):
-            if ham_not or yuklenen_foto:
-                if ders_adi not in st.session_state["ders_notlari"]:
-                    st.session_state["ders_notlari"][ders_adi] = {}
-                if secilen_hafta not in st.session_state["ders_notlari"][ders_adi]:
-                    st.session_state["ders_notlari"][ders_adi][secilen_hafta] = []
-                
-                if ham_not:
-                    st.session_state["ders_notlari"][ders_adi][secilen_hafta].append({"tip": "metin", "icerik": ham_not})
-                if yuklenen_foto:
-                    st.session_state["ders_notlari"][ders_adi][secilen_hafta].append({"tip": "fotograf", "icerik": yuklenen_foto.read()})
-                st.success("Havuza fırlatıldı! 📁")
-                st.rerun()
+        # DİREKT TELEFON KAMERASINI AÇMA ÖZELLİĞİ kanka
+        st.markdown("📸 **Tahta Fotoğrafı Çek:**")
+        cekilen_foto = st.camera_input("Kamerayı Aç")
+        
+        st.markdown("---")
+        st.markdown("### 2. PDF Kitap/Slayt Özetleme")
+        yuklenen_pdf = st.file_uploader("📄 Slayt veya Kitap PDF'i Yükle:", type=["pdf"])
+        
+        if st.button("🚀 Verileri Havuza ve Yapay Zekaya Gönder", use_container_width=True):
+            if ders_adi not in st.session_state["ders_notlari"]:
+                st.session_state["ders_notlari"][ders_adi] = {}
+            if secilen_hafta not in st.session_state["ders_notlari"][ders_adi]:
+                st.session_state["ders_notlari"][ders_adi][secilen_hafta] = []
+            
+            # Normal metin varsa ekle
+            if ham_not:
+                st.session_state["ders_notlari"][ders_adi][secilen_hafta].append({"tip": "metin", "icerik": ham_not})
+            
+            # Kamera fotoğrafı varsa ekle
+            if cekilen_foto:
+                st.session_state["ders_notlari"][ders_adi][secilen_hafta].append({"tip": "fotograf", "icerik": cekilen_foto.read()})
+            
+            # PDF varsa oku, özetle ve arşive ekle
+            if yuklenen_pdf:
+                with st.spinner("📄 PDF okunuyor ve yapay zeka tarafından özetleniyor..."):
+                    try:
+                        reader = PdfReader(io.BytesIO(yuklenen_pdf.read()))
+                        pdf_metni = ""
+                        for sayfa in reader.pages[:10]: # İlk 10 sayfayı okutuyoruz mobil kasmasın diye
+                            pdf_metni += sayfa.extract_text() + "\n"
+                        
+                        komut = f"Aşağıdaki ders notu PDF metnini, bir üniversite öğrencisinin sınavda en çok işine yarayacak şekilde, önemli kavramları, formülleri ve muhasebe kodlarını vurgulayarak özetle kanka:\n\n{pdf_metni}"
+                        yanit = model.generate_content(komut)
+                        
+                        st.session_state["ders_notlari"][ders_adi][secilen_hafta].append({"tip": "metin", "icerik": f"📄 **PDF ÖZETİ:**\n\n{yanit.text}"})
+                    except Exception as e:
+                        st.error(f"PDF Özetleme Hatası: {e}")
+            
+            st.success("Tüm yüklemeler başarıyla arşive işlendi! 📁")
+            st.rerun()
 
-    # SEKME 3: SINAV KAHİNİ (SORU ODASI)
+    # SEKME 3: YAPAY ZEKA SORU ODASI (ÖRNEK SORU GİRİŞLİ)
     with sekme3:
         st.subheader("📝 Yapay Zeka Soru Odası")
         ders_kontrol = st.selectbox("Ders Seçin:", ["Finansal Muhasebe", "Ticaret Hukuku", "Makro İktisat"], key="kahin_mob_ders")
-        zorluk = st.select_slider("Zorluk:", options=["Kolay", "Orta", "Zor", "Hocanın Saplama Modu"], key="mob_zorluk")
+        zorluk = st.select_slider("Zorluk Seviyesi:", options=["Kolay", "Orta", "Zor", "Hocanın Saplama Modu"], key="mob_zorluk")
         
-        if st.button("🔮 Yapay Zekaya Soru Ürettir", use_container_width=True):
-            komut = f"Sen üniversitede {ders_kontrol} dersi veren bir hocasın. {zorluk} seviyesinde bir sınav sorusu ve hemen altına detaylı adım adım çözümünü üret kanka. Arada mutlaka '---' kullan."
-            with st.spinner("🔮 Soru hazırlanıyor..."):
+        st.markdown("---")
+        ornek_soru = st.text_area("✍️ Örnek Soru Yazınız (Opsiyonel):", placeholder="Kendi sorunu buraya yazarsan yapay zeka bunu çözer. Boş bırakırsan kendisi sıfırdan soru üretir kanka...", height=100)
+        
+        if st.button("🔮 Soru Hazırla / Çözdür", use_container_width=True):
+            if ornek_soru:
+                komut = f"Sen üniversitede {ders_kontrol} dersi veren bir hocasın. Öğrencinin sana gönderdiği şu soruyu adım adım, üniversite sınav formatına uygun şekilde çok detaylıca çöz ve anlat kanka. Varsa yevmiye kayıtlarını ve muhasebe mantığını tek tek göster:\n\n{ornek_soru}"
+            else:
+                komut = f"Sen üniversitede {ders_kontrol} dersi veren bir hocasın. {zorluk} seviyesinde üniversite sınavına uygun orijinal bir soru üret ve hemen altına '---' koyarak adım adım çok detaylı çözümünü yaz kanka."
+            
+            with st.spinner("🔮 Sihirli küre soruyu inceliyor..."):
                 try:
                     response = model.generate_content(komut)
                     st.session_state["mob_soru"] = response.text
@@ -120,19 +164,59 @@ else:
         if "mob_soru" in st.session_state:
             st.markdown(st.session_state["mob_soru"])
 
-    # SEKME 4: HARF NOTU HESAPLAMA
+    # SEKME 4: HARF NOTU VE FİNAL SİMÜLATÖRÜ
     with sekme4:
-        st.subheader("📊 Harf Notu Garantör")
+        st.subheader("📊 Harf Notu & Geçme Simülatörü")
         vize_notu = st.slider("Vize Notun?", min_value=0, max_value=100, value=40, key="mob_vize")
         sinif_ort = st.slider("Sınıf Ortalaması?", min_value=20, max_value=80, value=45, key="mob_ort")
+        muhtemel_final = st.slider("🔮 Muhtemelen Final Notun Kaç Olur?", min_value=0, max_value=100, value=50, key="mob_muhtemel_final")
         
         st.markdown("---")
-        # Basit hedef hesabı (CC için gereken final)
-        vize_katki = vize_notu * 0.4
-        gereken_final = (sinif_ort - vize_katki) / 0.6
-        gereken_final = max(45.0, gereken_final)
         
-        if gereken_final > 100:
-            st.error("🚨 Sınıf ortalamasına göre geçmen imkansız görünüyor kanka!")
+        # Hesaplama Algoritması
+        vize_katki = vize_notu * 0.4
+        final_katki = muhtemel_final * 0.6
+        donem_notu = vize_katki + final_katki
+        
+        # Çan eğrisine göre basit harf notu tahmini
+        fark = donem_notu - sinif_ort
+        
+        if muhtemel_final < 45: # Birçok üniversitede final barajı 45'tir kanka
+            harf_notu = "FF (Final Barajı Altı)"
+            durum = "Kaldın kanka ❌"
+            renk = st.error
+        elif fark >= 20:
+            harf_notu = "AA"
+            durum = " canavar gibi geçtin! 🚀"
+            renk = st.success
+        elif fark >= 12:
+            harf_notu = "BA"
+            durum = " çok rahat geçtin! 😎"
+            renk = st.success
+        elif fark >= 5:
+            harf_notu = "BB"
+            durum = " güzel notla geçtin! 🙌"
+            renk = st.success
+        elif fark >= -2:
+            harf_notu = "CB"
+            durum = " geçtin kanka! 👍"
+            renk = st.success
+        elif fark >= -8:
+            harf_notu = "CC"
+            durum = " sınırda geçtin kanka! 🎯"
+            renk = st.success
+        elif fark >= -15:
+            harf_notu = "DC"
+            durum = " Koşullu Geçtin (Ortalaman 2.00 üzeriyse)."
+            renk = st.warning
+        elif fark >= -20:
+            harf_notu = "DD"
+            durum = " Koşullu Geçtin (Ortalaman 2.00 üzeriyse)."
+            renk = st.warning
         else:
-            st.metric(label="🎯 CC ile Geçmek İçin Gereken Final:", value=f"{round(gereken_final, 1)}")
+            harf_notu = "FF"
+            durum = "Kaldın kanka ❌"
+            renk = st.error
+
+        st.metric(label="📊 Hesaplanan Dönem Sonu Notun:", value=f"{round(donem_notu, 1)}")
+        renk(f"Tahmini Harf Notun: **{harf_notu}** — {durum}")
