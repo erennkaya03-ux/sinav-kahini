@@ -39,8 +39,8 @@ HESAP_PLANI = {"100": "KASA", "101": "ALINAN ÇEKLER", "102": "BANKALAR", "103":
 # --- GİRİŞ KONTROLÜ (KEY YOKSA SADECE BU EKRAN GÖRÜNÜR) ---
 if not st.session_state["api_key_kayitli"]:
     st.title("🔮 Sınav Kahini Giriş")
-    st.subheader("Hoş geldin kanka!")
-    girilen_key = st.text_input("🔑 Gemini API Key Girin:", type="password", help="Google AI Studio'dan aldığın ücretsiz anahtarı buraya yapıştır kanka.")
+    st.subheader("Hoş geldiniz")
+    girilen_key = st.text_input("🔑 Gemini API Key Girin:", type="password", help="Google AI Studio'dan aldığınız ücretsiz anahtarı buraya yapıştırın.")
     
     if st.button("Sisteme Giriş Yap 🚀", use_container_width=True):
         if girilen_key:
@@ -48,9 +48,9 @@ if not st.session_state["api_key_kayitli"]:
             st.success("Giriş başarılı! Uygulama açılıyor...")
             st.rerun()
         else:
-            st.error("Lütfen geçerli bir anahtar gir kanka!")
+            st.error("Lütfen geçerli bir anahtar girin.")
             
-    st.info("💡 **Nasıl Ücretsiz Şifre Alırım?**\n1. [Google AI Studio](https://aistudio.google.com/) sitesine git.\n2. Giriş yapıp **'Get API Key'** butonuna bas.\n3. Kodu kopyala ve yukarıdaki kutuya yapıştır!")
+    st.info("💡 **Nasıl Ücretsiz Şifre Alırım?**\n1. [Google AI Studio](https://aistudio.google.com/) sitesine git.\n2. Giriş yapıp **'Get API Key'** butonuna bas.\n3. Kodu kopyala ve yukarıdaki kutuya yapıştırın.")
 
 # --- UYGULAMA ANA EKRANI ---
 else:
@@ -70,7 +70,7 @@ else:
 
     # SEKME 1: DERS ARŞİVİ
     with sekme1:
-        st.subheader("📌 Ders Kütüphanen")
+        st.subheader("📌 Ders Kütüphanesi")
         if st.session_state["ders_notlari"]:
             for ders, haftalar in st.session_state["ders_notlari"].items():
                 with st.expander(f"📁 {ders}", expanded=True):
@@ -85,7 +85,7 @@ else:
                             del st.session_state["ders_notlari"][ders][hafta]
                             st.rerun()
         else:
-            st.caption("Henüz yüklenmiş bir ders notu yok kanka.")
+            st.caption("Henüz yüklenmiş bir ders notu bulunmamaktadır.")
 
     # SEKME 2: NOT VE PDF YÜKLEME
     with sekme2:
@@ -94,7 +94,7 @@ else:
         secilen_hafta = st.number_input("Hafta:", min_value=1, max_value=14, value=1, key="mob_hafta")
         
         st.markdown("### 1. Yazılı Not veya Tahta Fotoğrafı")
-        ham_not = st.text_area("📝 Hocanın lafını karala veya yapıştır:", placeholder="Hoca buraya yıldız koydu...", height=80)
+        ham_not = st.text_area("📝 Not ekleyin veya yapıştırın:", placeholder="Önemli notlar...", height=80)
         
         yuklenen_foto = st.file_uploader("📸 Tahta Fotoğrafı Yükle (Galeri/Dosya):", type=["png", "jpg", "jpeg"])
         
@@ -122,7 +122,7 @@ else:
                         for sayfa in reader.pages[:10]:
                             pdf_metni += sayfa.extract_text() + "\n"
                         
-                        komut = f"Aşağıdaki ders notu PDF metnini, bir üniversite öğrencisinin sınavda en çok işine yarayacak şekilde, önemli kavramları, formülleri ve muhasebe kodlarını vurgulayarak özetle kanka:\n\n{pdf_metni}"
+                        komut = f"Aşağıdaki ders notu PDF metnini, bir üniversite öğrencisinin sınavda en çok işine yarayacak şekilde, önemli kavramları, formülleri ve muhasebe kodlarını vurgulayarak özetle:\n\n{pdf_metni}"
                         yanit = model.generate_content(komut)
                         
                         st.session_state["ders_notlari"][ders_adi][secilen_hafta].append({"tip": "metin", "icerik": f"📄 **PDF ÖZETİ:**\n\n{yanit.text}"})
@@ -139,13 +139,13 @@ else:
         zorluk = st.select_slider("Zorluk Seviyesi:", options=["Kolay", "Orta", "Zor", "Hocanın Saplama Modu"], key="mob_zorluk")
         
         st.markdown("---")
-        ornek_soru = st.text_area("✍️ Örnek Soru Yazınız (Opsiyonel):", placeholder="Kendi sorunu buraya yazarsan yapay zeka bunu çözer. Boş bırakırsan kendisi sıfırdan soru üretir kanka...", height=100)
+        ornek_soru = st.text_area("✍️ Örnek Soru Yazınız (Opsiyonel):", placeholder="Kendi sorunuzu buraya yazarsanız yapay zeka bunu çözer. Boş bırakırsanız kendisi sıfırdan soru üretir...", height=100)
         
         if st.button("🔮 Soru Hazırla / Çözdür", use_container_width=True):
             if ornek_soru:
-                komut = f"Sen üniversitede {ders_kontrol} dersi veren bir hocasın. Öğrencinin sana gönderdiği şu soruyu adım adım, üniversite sınav formatına uygun şekilde çok detaylıca çöz ve anlat kanka. Varsa yevmiye kayıtlarını ve muhasebe mantığını tek tek göster:\n\n{ornek_soru}"
+                komut = f"Sen üniversitede {ders_kontrol} dersi veren bir hocasın. Öğrencinin sana gönderdiği şu soruyu adım adım, üniversite sınav formatına uygun şekilde çok detaylıca çöz ve anlat. Varsa yevmiye kayıtlarını ve muhasebe mantığını tek tek göster:\n\n{ornek_soru}"
             else:
-                komut = f"Sen üniversitede {ders_kontrol} dersi veren bir hocasın. {zorluk} seviyesinde üniversite sınavına uygun orijinal bir soru üret ve hemen altına '---' koyarak adım adım çok detaylı çözümünü yaz kanka."
+                komut = f"Sen üniversitede {ders_kontrol} dersi veren bir hocasın. {zorluk} seviyesinde üniversite sınavına uygun orijinal bir soru üret ve hemen altına '---' koyarak adım adım çok detaylı çözümünü yaz."
             
             with st.spinner("🔮 Sihirli küre soruyu inceliyor..."):
                 try:
@@ -160,9 +160,15 @@ else:
     # SEKME 4: HARF NOTU VE FİNAL SİMÜLATÖRÜ
     with sekme4:
         st.subheader("📊 Harf Notu & Geçme Simülatörü")
-        vize_notu = st.slider("Vize Notun?", min_value=0, max_value=100, value=40, key="mob_vize")
+        
+        # Uyarı mesajları en üst sıraya taşındı
+        st.error("🚨 **!!DİKKAT:** Bu hesaplama matematiksel bir tahmindir. Kesin harf notu sonucu için lütfen OBS sistemine giriniz.")
+        st.warning("⚠️ **NOT:** Vize ve final ortalaması 40 ve altındaysa veya final notu 45'in altındaysa sistem otomatik olarak FF verir.")
+        st.markdown("---")
+        
+        vize_notu = st.slider("Vize Notu?", min_value=0, max_value=100, value=40, key="mob_vize")
         sinif_ort = st.slider("Sınıf Ortalaması?", min_value=20, max_value=80, value=45, key="mob_ort")
-        muhtemel_final = st.slider("🔮 Muhtemelen Final Notun Kaç Olur?", min_value=0, max_value=100, value=50, key="mob_muhtemel_final")
+        muhtemel_final = st.slider("🔮 Muhtemelen Final Notu Kaç Olur?", min_value=0, max_value=100, value=50, key="mob_muhtemel_final")
         
         st.markdown("---")
         
@@ -174,49 +180,44 @@ else:
         # Harf Notu Karar Mantığı
         if muhtemel_final < 45:
             harf_notu = "FF (Final Barajı Altı)"
-            durum = "Kaldın kanka ❌"
+            durum = "Kaldınız ❌"
             renk = st.error
         elif donem_notu <= 40:
             harf_notu = "FF"
-            durum = "Kaldın kanka ❌"
+            durum = "Kaldınız ❌"
             renk = st.error
         elif fark >= 20:
             harf_notu = "AA"
-            durum = " canavar gibi geçtin! 🚀"
+            durum = "Başarıyla geçtiniz! 🚀"
             renk = st.success
         elif fark >= 12:
             harf_notu = "BA"
-            durum = " çok rahat geçtin! 😎"
+            durum = "Rahatlıkla geçtiniz! 😎"
             renk = st.success
         elif fark >= 5:
             harf_notu = "BB"
-            durum = " güzel notla geçtin! 🙌"
+            durum = "İyi bir notla geçtiniz! 🙌"
             renk = st.success
         elif fark >= -2:
             harf_notu = "CB"
-            durum = " geçtin kanka! 👍"
+            durum = "Geçtiniz! 👍"
             renk = st.success
         elif fark >= -8:
             harf_notu = "CC"
-            durum = " sınırda geçtin kanka! 🎯"
+            durum = "Sınırda geçtiniz! 🎯"
             renk = st.success
         elif fark >= -15:
             harf_notu = "DC"
-            durum = " Koşullu Geçtin (Ortalaman 2.00 üzeriyse)."
+            durum = "Koşullu Geçtiniz (Ortalama 2.00 üzeriyse)."
             renk = st.warning
         elif fark >= -20:
             harf_notu = "DD"
-            durum = " Koşullu Geçtin (Ortalaman 2.00 üzeriyse)."
+            durum = "Koşullu Geçtiniz (Ortalama 2.00 üzeriyse)."
             renk = st.warning
         else:
             harf_notu = "FF"
-            durum = "Kaldın kanka ❌"
+            durum = "Kaldınız ❌"
             renk = st.error
 
-        st.metric(label="📊 Hesaplanan Dönem Sonu Notun:", value=f"{round(donem_notu, 1)}")
-        renk(f"Tahmini Harf Notun: **{harf_notu}** — {durum}")
-        
-        st.markdown("---")
-        # İstediğin Kısa ve Öz Uyarı Notları kanka:
-        st.warning("⚠️ **NOT:** Vize ve final ortalaması 40 ve altındaysa veya final notu 45'in altındaysa sistem otomatik olarak FF verir kanka.")
-        st.error("🚨 **!!DİKKAT:** Bu hesaplama matematiksel bir tahmindir. Kesin harf notu sonucu için lütfen OBS sistemine giriniz kanka.")
+        st.metric(label="📊 Hesaplanan Dönem Sonu Notu:", value=f"{round(donem_notu, 1)}")
+        renk(f"Tahmini Harf Notu: **{harf_notu}** — {durum}")
