@@ -23,6 +23,14 @@ st.markdown("""
         font-size: 14px !important;
         padding: 10px 5px !important;
     }
+    .ders-baslik {
+        font-weight: bold;
+        color: #1E88E5;
+        margin-top: 10px;
+        margin-bottom: 5px;
+        border-bottom: 1px solid #ddd;
+        padding-bottom: 2px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -32,6 +40,45 @@ if "ders_notlari" not in st.session_state:
 
 if "api_key_kayitli" not in st.session_state:
     st.session_state["api_key_kayitli"] = ""
+
+# --- MÜFREDAT VERİTABANI (SINIFLARA GÖRE AYRILMIŞ HAVUZ) ---
+# Ortak dersler ve gönüllülük çalışmaları filtrelenmiştir.
+MÜFREDAT_HAVUZU = {
+    "1. SINIF DERSLERİ": [
+        "İktisada Giriş I", "Genel Hukuk", "Bilgisayar Kullanımı ve Ofis Uygulamaları", 
+        "Genel İşletme", "Finansal Muhasebe I", "İktisada Giriş II", 
+        "Yönetim ve Organizasyon", "Ticari Belgeler", "Ticari ve Mali Matematik", 
+        "Finansal Muhasebe II", "Ticaret Hukuku"
+    ],
+    "2. SINIF DERSLERİ": [
+        "Finansal Okuryazarlık", "Finans Matematiği", "Muhasebe Paket Programları I", 
+        "Şirketler Muhasebesi", "Stratejik Yönetim", "Halkla İlişkiler", 
+        "İş ve Sosyal Güvenlik Hukuku", "Muhasebe Meslek Mevzuatı ve Etiği", "E-Ticaret", 
+        "Muhasebe Paket Programları II", "Para ve Sermaye Piyasası Kurumları", 
+        "Finansal Tablolar Analizi", "İhtisas Muhasebesi", "Kıymetli Evrak Hukuku", 
+        "Girişimcilik", "İletişim ve Etkili Sunum Teknikleri", "Davranışsal İktisat", 
+        "Dış Ticaret İşlemleri", "Pazarlama Yönetimi"
+    ],
+    "3. SINIF DERSLERİ": [
+        "Vergi Hukuku", "Yatırım Analizi ve Portföy Yönetimi", "Finansal Yönetim I", 
+        "Maliyet Muhasebesi I", "Sermaye Piyasası Mevzuatı", "Türkiye Ekonomisi", 
+        "Borsa İşlemleri", "Muhasebede Seçilmiş Konular ve Örnek Olaylar", "İstatistik", 
+        "Enflasyon Muhasebesi", "Finansal Sistem ve Uygulamaları I", "Finansal Yönetim II", 
+        "Maliyet Muhasebesi II", "Türk Vergi Sistemi ve Uygulamaları", "Muhasebe Denetimi", 
+        "Yatırım Kuruluşları ve Araçları", "Yönlendirilmiş Çalışmalar", "Davranış Bilimleri", 
+        "Dış Ticaret İşlemleri Muhasebesi", "Sosyoloji"
+    ],
+    "4. SINIF DERSLERİ": [
+        "Muhasebe Standartları", "Finansal Sistem ve Uygulamaları II", "Maliyet Yönetimi", 
+        "Davranışsal Finans", "Yönetim Muhasebesi", "Bilimsel Araştırma Yöntemleri", 
+        "Türev Piyasalar ve Risk Yönetimi", "Muhasebe Bilgi Sistemleri", "Kobi Finansmanı", 
+        "İş Sağlığı ve Güvenliği", "İnsan Kaynakları Yönetimi", "İşletmede Mesleki Eğitim"
+    ]
+}
+
+# Başlangıçta boş kalmaması için ilk açılış dersleri
+if "secilen_dersler" not in st.session_state:
+    st.session_state["secilen_dersler"] = ["Finansal Muhasebe I", "Finansal Muhasebe II", "Ticaret Hukuku"]
 
 # --- TEK DÜZEN HESAP PLANI VERİTABANI ---
 HESAP_PLANI = {"100": "KASA", "101": "ALINAN ÇEKLER", "102": "BANKALAR", "103": "VERİLEN ÇEKLER (-)", "120": "ALICILAR", "121": "ALACAK SENETLERİ", "153": "TİCARİ MALLAR", "191": "İNDİRİLECEK KDV", "254": "TAŞITLAR", "255": "DEMİRBAŞLAR", "257": "BİRİKMİŞ AMORTİSMANLAR (-)", "320": "SATICILAR", "321": "BORÇ SENETLERİ", "391": "HESAPLANAN KDV", "500": "SERMAYE", "600": "YURTİÇİ SATIŞLAR", "621": "STMM (-)", "770": "GENEL YÖNETİM GİDERLERİ"}
@@ -57,8 +104,35 @@ else:
     genai.configure(api_key=st.session_state["api_key_kayitli"])
     model = genai.GenerativeModel('gemini-2.5-flash')
     
-    st.title("🔮 Sınav Kahini Mobil")
+    col_baslik, col_ayar = st.columns([2, 1])
     
+    with col_baslik:
+        st.title("🔮 Sınav Kahini")
+        
+    with col_ayar:
+        # Tıklandığında açılan esnek mini pencere mekanizması
+        with st.popover("➕ Ders Ekle/Çıkar"):
+            st.markdown("### 📚 Müfredat Listesi")
+            st.caption("Dönem derslerinizi işaretleyip kaydedin:")
+            
+            gecici_secimler = []
+            
+            # Dersleri sınıflarına göre başlıklandırarak döngüye alıyoruz
+            for sinif_adi, ders_listesi in MÜFREDAT_HAVUZU.items():
+                st.markdown(f"<div class='ders-baslik'>{sinif_adi}</div>", unsafe_allow_html=True)
+                for ders in ders_listesi:
+                    durum = ders in st.session_state["secilen_dersler"]
+                    if st.checkbox(ders, value=durum, key=f"pop_{ders}"):
+                        gecici_secimler.append(ders)
+            
+            st.markdown("---")
+            if st.button("Listeyi Güncelle", type="primary", use_container_width=True):
+                if gecici_secimler:
+                    st.session_state["secilen_dersler"] = gecici_secimler
+                    st.rerun()
+                else:
+                    st.error("En az bir ders seçilmelidir.")
+
     if st.button("🔒 Oturumu Kapat / Key Değiştir", use_container_width=True):
         st.session_state["api_key_kayitli"] = ""
         st.rerun()
@@ -72,25 +146,30 @@ else:
     with sekme1:
         st.subheader("📌 Ders Kütüphanesi")
         if st.session_state["ders_notlari"]:
+            aktif_arsiv_var_mi = False
             for ders, haftalar in st.session_state["ders_notlari"].items():
-                with st.expander(f"📁 {ders}", expanded=True):
-                    for hafta, veri_listesi in sorted(haftalar.items()):
-                        st.markdown(f"**🗓️ {hafta}. Hafta**")
-                        for idx, eleman in enumerate(veri_listesi):
-                            if eleman["tip"] == "metin":
-                                st.info(eleman['icerik'])
-                            elif eleman["tip"] == "fotograf":
-                                st.image(eleman["icerik"], use_container_width=True)
-                        if st.button(f"🗑️ {hafta}. Haftayı Temizle", key=f"del_{ders}_{hafta}", use_container_width=True):
-                            del st.session_state["ders_notlari"][ders][hafta]
-                            st.rerun()
+                if ders in st.session_state["secilen_dersler"]:
+                    aktif_arsiv_var_mi = True
+                    with st.expander(f"📁 {ders}", expanded=True):
+                        for hafta, veri_listesi in sorted(haftalar.items()):
+                            st.markdown(f"**🗓️ {hafta}. Hafta**")
+                            for idx, eleman in enumerate(veri_listesi):
+                                if eleman["tip"] == "metin":
+                                    st.info(eleman['icerik'])
+                                elif eleman["tip"] == "fotograf":
+                                    st.image(eleman["icerik"], use_container_width=True)
+                            if st.button(f"🗑️ {hafta}. Haftayı Temizle", key=f"del_{ders}_{hafta}", use_container_width=True):
+                                del st.session_state["ders_notlari"][ders][hafta]
+                                st.rerun()
+            if not aktif_arsiv_var_mi:
+                st.caption("Seçili aktif derslerinize ait yüklenmiş not bulunmamaktadır.")
         else:
             st.caption("Henüz yüklenmiş bir ders notu bulunmamaktadır.")
 
     # SEKME 2: NOT VE PDF YÜKLEME
     with sekme2:
         st.subheader("📢 Ders Notu & PDF & Fotoğraf Yükle")
-        ders_adi = st.selectbox("Ders:", ["Finansal Muhasebe", "Ticaret Hukuku", "Makro İktisat"], key="mob_ders")
+        ders_adi = st.selectbox("Ders:", options=st.session_state["secilen_dersler"], key="mob_ders")
         secilen_hafta = st.number_input("Hafta:", min_value=1, max_value=14, value=1, key="mob_hafta")
         
         st.markdown("### 1. Yazılı Not veya Tahta Fotoğrafı")
@@ -135,7 +214,7 @@ else:
     # SEKME 3: YAPAY ZEKA SORU ODASI
     with sekme3:
         st.subheader("📝 Yapay Zeka Soru Odası")
-        ders_kontrol = st.selectbox("Ders Seçin:", ["Finansal Muhasebe", "Ticaret Hukuku", "Makro İktisat"], key="kahin_mob_ders")
+        ders_kontrol = st.selectbox("Ders Seçin:", options=st.session_state["secilen_dersler"], key="kahin_mob_ders")
         zorluk = st.select_slider("Zorluk Seviyesi:", options=["Kolay", "Orta", "Zor", "Hocanın Saplama Modu"], key="mob_zorluk")
         
         st.markdown("---")
@@ -161,7 +240,6 @@ else:
     with sekme4:
         st.subheader("📊 Harf Notu & Geçme Simülatörü")
         
-        # Uyarı mesajları en üst sıraya taşındı
         st.error("🚨 **!!DİKKAT:** Bu hesaplama matematiksel bir tahmindir. Kesin harf notu sonucu için lütfen OBS sistemine giriniz.")
         st.warning("⚠️ **NOT:** Vize ve final ortalaması 40 ve altındaysa veya final notu 45'in altındaysa sistem otomatik olarak FF verir.")
         st.markdown("---")
@@ -177,7 +255,6 @@ else:
         donem_notu = vize_katki + final_katki
         fark = donem_notu - sinif_ort
         
-        # Harf Notu Karar Mantığı
         if muhtemel_final < 45:
             harf_notu = "FF (Final Barajı Altı)"
             durum = "Kaldınız ❌"
