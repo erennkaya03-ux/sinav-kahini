@@ -33,6 +33,12 @@ if "ders_notlari" not in st.session_state:
 if "api_key_kayitli" not in st.session_state:
     st.session_state["api_key_kayitli"] = ""
 
+if "kamera_acik" not in st.session_state:
+    st.session_state["kamera_acik"] = False
+
+if "gecici_foto" not in st.session_state:
+    st.session_state["gecici_foto"] = None
+
 # --- TEK DÜZEN HESAP PLANI VERİTABANI ---
 HESAP_PLANI = {"100": "KASA", "101": "ALINAN ÇEKLER", "102": "BANKALAR", "103": "VERİLEN ÇEKLER (-)", "120": "ALICILAR", "121": "ALACAK SENETLERİ", "153": "TİCARİ MALLAR", "191": "İNDİRİLECEK KDV", "254": "TAŞITLAR", "255": "DEMİRBAŞLAR", "257": "BİRİKMİŞ AMORTİSMANLAR (-)", "320": "SATICILAR", "321": "BORÇ SENETLERİ", "391": "HESAPLANAN KDV", "500": "SERMAYE", "600": "YURTİÇİ SATIŞLAR", "621": "STMM (-)", "770": "GENEL YÖNETİM GİDERLERİ"}
 
@@ -52,15 +58,13 @@ if not st.session_state["api_key_kayitli"]:
             
     st.info("💡 **Nasıl Ücretsiz Şifre Alırım?**\n1. [Google AI Studio](https://aistudio.google.com/) sitesine git.\n2. Giriş yapıp **'Get API Key'** butonuna bas.\n3. Kodu kopyala ve yukarıdaki kutuya yapıştır!")
 
-# --- UYGULAMA ANA EKRANI (GİRİŞ YAPILDIYSA KEY KUTUSU OLMADAN AÇILIR) ---
+# --- UYGULAMA ANA EKRANI ---
 else:
-    # Yapay zekayı arkada yapılandırıyoruz
     genai.configure(api_key=st.session_state["api_key_kayitli"])
     model = genai.GenerativeModel('gemini-2.5-flash')
     
     st.title("🔮 Sınav Kahini Mobil")
     
-    # Çıkış Yap butonu (En altta kalabalık etmesin diye ufak bir seçenek veya üstte dursun)
     if st.button("🔒 Oturumu Kapat / Key Değiştir", use_container_width=True):
         st.session_state["api_key_kayitli"] = ""
         st.rerun()
@@ -89,7 +93,7 @@ else:
         else:
             st.caption("Henüz yüklenmiş bir ders notu yok kanka.")
 
-    # SEKME 2: NOT VE PDF YÜKLEME (KAMERA DAHİL)
+    # SEKME 2: NOT VE PDF YÜKLEME (AKILLI KAMERA MODÜLÜ)
     with sekme2:
         st.subheader("📢 Ders Notu & PDF & Fotoğraf Yükle")
         ders_adi = st.selectbox("Ders:", ["Finansal Muhasebe", "Ticaret Hukuku", "Makro İktisat"], key="mob_ders")
@@ -98,9 +102,32 @@ else:
         st.markdown("### 1. Yazılı Not veya Tahta Fotoğrafı")
         ham_not = st.text_area("📝 Hocanın lafını karala veya yapıştır:", placeholder="Hoca buraya yıldız koydu...", height=80)
         
-        # DİREKT TELEFON KAMERASINI AÇMA ÖZELLİĞİ kanka
-        st.markdown("📸 **Tahta Fotoğrafı Çek:**")
-        cekilen_foto = st.camera_input("Kamerayı Aç")
+        # --- AKILLI MOBİL KAMERA SİSTEMİ kanka ---
+        st.markdown("📸 **Tahta Fotoğrafı:**")
+        
+        if not st.session_state["kamera_acik"]:
+            if st.button("📷 Kamerayı Aç ve Fotoğraf Çek", use_container_width=True):
+                st.session_state["kamera_acik"] = True
+                st.rerun()
+        else:
+            # Sadece tıklandığında açılan ve işi bitince kapanan kamera alanı kanka
+            cekilen_foto = st.camera_input("Tahtayı Hizala ve Çek")
+            if cekilen_foto:
+                st.session_state["gecici_foto"] = cekilen_foto.read()
+                st.success("Fotoğraf hafızaya alındı! 👍")
+                st.session_state["kamera_acik"] = False # Fotoğraf çekilince kamerayı kapatıyoruz kanka
+                st.rerun()
+            
+            if st.button("❌ Kamerayı Kapat / Vazgeç", use_container_width=True):
+                st.session_state["kamera_acik"] = False
+                st.rerun()
+        
+        # Eğer hafızada çekilmiş bir fotoğraf varsa ekranda küçük bir önizleme gösterelim kanka
+        if st.session_state["gecici_foto"]:
+            st.caption("✅ Gönderilmeyi bekleyen bir fotoğraf var.")
+            if st.button("🗑️ Çekilen Fotoğrafı Sil", use_container_width=True):
+                st.session_state["gecici_foto"] = None
+                st.rerun()
         
         st.markdown("---")
         st.markdown("### 2. PDF Kitap/Slayt Özetleme")
@@ -112,21 +139,20 @@ else:
             if secilen_hafta not in st.session_state["ders_notlari"][ders_adi]:
                 st.session_state["ders_notlari"][ders_adi][secilen_hafta] = []
             
-            # Normal metin varsa ekle
             if ham_not:
                 st.session_state["ders_notlari"][ders_adi][secilen_hafta].append({"tip": "metin", "icerik": ham_not})
             
-            # Kamera fotoğrafı varsa ekle
-            if cekilen_foto:
-                st.session_state["ders_notlari"][ders_adi][secilen_hafta].append({"tip": "fotograf", "icerik": cekilen_foto.read()})
+            # Hafızadaki çekilmiş fotoğrafı havuza ekliyoruz kanka
+            if st.session_state["gecici_foto"]:
+                st.session_state["ders_notlari"][ders_adi][secilen_hafta].append({"tip": "fotograf", "icerik": st.session_state["gecici_foto"]})
+                st.session_state["gecici_foto"] = None # Gönderdikten sonra temizliyoruz kanka
             
-            # PDF varsa oku, özetle ve arşive ekle
             if yuklenen_pdf:
                 with st.spinner("📄 PDF okunuyor ve yapay zeka tarafından özetleniyor..."):
                     try:
                         reader = PdfReader(io.BytesIO(yuklenen_pdf.read()))
                         pdf_metni = ""
-                        for sayfa in reader.pages[:10]: # İlk 10 sayfayı okutuyoruz mobil kasmasın diye
+                        for sayfa in reader.pages[:10]:
                             pdf_metni += sayfa.extract_text() + "\n"
                         
                         komut = f"Aşağıdaki ders notu PDF metnini, bir üniversite öğrencisinin sınavda en çok işine yarayacak şekilde, önemli kavramları, formülleri ve muhasebe kodlarını vurgulayarak özetle kanka:\n\n{pdf_metni}"
@@ -139,7 +165,7 @@ else:
             st.success("Tüm yüklemeler başarıyla arşive işlendi! 📁")
             st.rerun()
 
-    # SEKME 3: YAPAY ZEKA SORU ODASI (ÖRNEK SORU GİRİŞLİ)
+    # SEKME 3: YAPAY ZEKA SORU ODASI
     with sekme3:
         st.subheader("📝 Yapay Zeka Soru Odası")
         ders_kontrol = st.selectbox("Ders Seçin:", ["Finansal Muhasebe", "Ticaret Hukuku", "Makro İktisat"], key="kahin_mob_ders")
@@ -173,15 +199,13 @@ else:
         
         st.markdown("---")
         
-        # Hesaplama Algoritması
         vize_katki = vize_notu * 0.4
         final_katki = muhtemel_final * 0.6
         donem_notu = vize_katki + final_katki
         
-        # Çan eğrisine göre basit harf notu tahmini
         fark = donem_notu - sinif_ort
         
-        if muhtemel_final < 45: # Birçok üniversitede final barajı 45'tir kanka
+        if muhtemel_final < 45:
             harf_notu = "FF (Final Barajı Altı)"
             durum = "Kaldın kanka ❌"
             renk = st.error
