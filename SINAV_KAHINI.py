@@ -284,48 +284,57 @@ else:
         st.metric(label="📊 Hesaplanan Dönem Sonu Notu:", value=f"{round(donem_notu, 1)}")
         renk(f"Tahmini Harf Notu: **{harf_notu}** — {durum}")
         # --- YENİ EKLENEN CHAT BÖLÜMÜ ---
-    # --- YENİ EKLENEN CHAT BÖLÜMÜ ---
+   # --- YÖNETİCİ MODLU CHAT ---
     with sekme5:
         st.subheader("💬 Bölüm Sohbeti")
         
-        # 1. İSİM KISMI
+        # 1. Susturulanlar Listesi
+        if "susturulanlar" not in st.session_state: st.session_state["susturulanlar"] = []
+        
+        # 2. İsim Alma
         if "kullanici_ismi" not in st.session_state:
-            isim = st.text_input("Sohbete başlamak için isminiz nedir?")
+            isim = st.text_input("Sohbete katılmak için isminiz nedir?")
             if st.button("Sohbete Katıl"):
                 if isim:
                     st.session_state["kullanici_ismi"] = isim
                     st.rerun()
-                else:
-                    st.warning("Lütfen bir isim girin.")
         else:
-            st.write(f"Hoş geldin, **{st.session_state['kullanici_ismi']}**!")
+            # Susturma kontrolü
+            if st.session_state["kullanici_ismi"] in st.session_state["susturulanlar"]:
+                st.error("🚫 Yönetici tarafından susturuldunuz. Sohbete yazamazsınız.")
+            else:
+                st.write(f"Hoş geldin, **{st.session_state['kullanici_ismi']}**!")
             
-            # 2. MESAJLAŞMA ALANI
-            # Not: Mesajları session_state içinde bir listede tutuyoruz
+            # Mesaj geçmişi
             if "mesajlar" not in st.session_state: st.session_state["mesajlar"] = []
             
-            # Mesajları göster
-            for msg in st.session_state["mesajlar"]:
-                st.write(msg)
+            for m in st.session_state["mesajlar"]:
+                st.write(m)
             
-            # 3. GÖNDERME KISMI (Enter'a basınca çalışması için bir form kullanıyoruz)
-            with st.form(key='chat_form', clear_on_submit=True):
-                yeni_mesaj = st.text_input("Mesajını yaz ve Enter'a bas:")
-                submit_button = st.form_submit_button(label='Gönder')
-                
-                if submit_button and yeni_mesaj:
-                    tam_mesaj = f"**{st.session_state['kullanici_ismi']}**: {yeni_mesaj}"
-                    st.session_state["mesajlar"].append(tam_mesaj)
-                    st.rerun()
+            # Sadece susturulmamış olanlar yazabilir
+            if st.session_state["kullanici_ismi"] not in st.session_state["susturulanlar"]:
+                with st.form(key='chat_form', clear_on_submit=True):
+                    yeni_mesaj = st.text_input("Mesajını yaz:")
+                    if st.form_submit_button("Gönder") and yeni_mesaj:
+                        st.session_state["mesajlar"].append(f"**{st.session_state['kullanici_ismi']}**: {yeni_mesaj}")
+                        st.rerun()
 
-            # 4. YÖNETİCİ PANELİ
+            # 3. YÖNETİCİ PANELİ (Gelişmiş)
             st.markdown("---")
             with st.expander("⚙️ Yönetici Paneli"):
-                sifre = st.text_input("Yönetici Şifresi:", type="password")
+                sifre = st.text_input("Şifre:", type="password")
                 if sifre == "admin123":
-                    if st.button("🗑️ Tüm Sohbeti Temizle"):
+                    # Kişi susturma
+                    susturulacak = st.selectbox("Susturulacak kişiyi seç:", options=[m.split(":")[0].replace("**", "") for m in st.session_state["mesajlar"]])
+                    if st.button("🚫 Bu Kişiyi Sustur"):
+                        if susturulacak not in st.session_state["susturulanlar"]:
+                            st.session_state["susturulanlar"].append(susturulacak)
+                            st.success(f"{susturulacak} susturuldu!")
+                            st.rerun()
+                    
+                    # Sohbeti temizle
+                    if st.button("🗑️ Sohbeti Komple Sil"):
                         st.session_state["mesajlar"] = []
                         st.rerun()
-                    if st.button("🚪 Çıkış Yap (İsim Değiştir)"):
-                        del st.session_state["kullanici_ismi"]
-                        st.rerun()
+                elif sifre:
+                    st.error("Hatalı şifre!")
