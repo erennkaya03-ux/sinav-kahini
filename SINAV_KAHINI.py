@@ -152,22 +152,21 @@ else:
     # --- 5 SEKME SİSTEMİ ---
     sekme1, sekme2, sekme3, sekme4, sekme5 = st.tabs(["📁 Arşiv", "📢 Not Yükle", "📝 Soru Odası", "📊 Hesapla", "💬 Bölüm Chat"])
 
-    # SEKME 1: ARŞİV
+    # SEKME 1: ARŞİV (YENİLENDİ - ARTIK DERSLER HEP GÖZÜKECEK)
     with sekme1:
         st.subheader("📌 Ders Kütüphanesi")
-        if st.session_state["ders_notlari"]:
-            for ders, haftalar in st.session_state["ders_notlari"].items():
-                if ders in st.session_state["secilen_dersler"]:
-                    with st.expander(f"📁 {ders}", expanded=True):
-                        for hafta, veri_listesi in sorted(haftalar.items()):
-                            st.markdown(f"**🗓️ {hafta}. Hafta**")
-                            for eleman in veri_listesi:
-                                if eleman["tip"] == "metin":
-                                    st.info(eleman['icerik'])
-                                elif eleman["tip"] == "fotograf":
-                                    st.image(eleman["icerik"], use_container_width=True)
-        else:
-            st.caption("Henüz yüklenmiş not yok.")
+        # Seçilen dersleri dönüyoruz, hafıza boş olsa bile klasörler açılacak
+        for ders in st.session_state["secilen_dersler"]:
+            with st.expander(f"📁 {ders}", expanded=True):
+                # Bu derse ait bir not girilmiş mi kontrol et
+                if ders in st.session_state["ders_notlari"] and st.session_state["ders_notlari"][ders]:
+                    for hafta, veri_listesi in sorted(st.session_state["ders_notlari"][ders].items()):
+                        st.markdown(f"**🗓️ {hafta}. Hafta**")
+                        for eleman in veri_listesi:
+                            if eleman["tip"] == "metin":
+                                st.info(eleman['icerik'])
+                else:
+                    st.caption("📥 Bu derse henüz bir ders notu yüklenmemiş. Not Yükle sekmesinden ekleme yapabilirsin kanka.")
 
     # SEKME 2: NOT YÜKLE
     with sekme2:
@@ -182,4 +181,69 @@ else:
             if st.button("Listeyi Güncelle", type="primary"):
                 if gecici_secimler:
                     st.session_state["secilen_dersler"] = gecici_secimler
-                    st
+                    st.rerun()
+        
+        st.markdown("---")
+        ders_adi = st.selectbox("Ders:", options=st.session_state["secilen_dersler"])
+        secilen_text_hafta = st.number_input("Hafta:", min_value=1, max_value=14, value=1)
+        ham_not = st.text_area("📝 Not ekleyin:")
+        if st.button("🚀 Gönder", use_container_width=True):
+            if ders_adi not in st.session_state["ders_notlari"]:
+                st.session_state["ders_notlari"][ders_adi] = {}
+            if secilen_text_hafta not in st.session_state["ders_notlari"][ders_adi]:
+                st.session_state["ders_notlari"][ders_adi][secilen_text_hafta] = []
+            if ham_not:
+                st.session_state["ders_notlari"][ders_adi][secilen_text_hafta].append({"tip": "metin", "icerik": ham_not})
+            st.success("Arşive eklendi!")
+
+    # SEKME 3: SORU ODASI
+    with sekme3:
+        st.subheader("📝 Yapay Zeka Soru Odası")
+        ders_kontrol = st.selectbox("Ders Seçin:", options=st.session_state["secilen_dersler"], key="sb_ders")
+        zorluk = st.select_slider("Zorluk:", options=["Kolay", "Orta", "Zor", "Hocanın Saplama Modu"])
+        ornek_soru = st.text_area("✍️ Soru Yazın (Opsiyonel):")
+        if st.button("🔮 Soruyu Çöz / Üret", use_container_width=True):
+            if not ornek_soru:
+                komut = f"{ders_kontrol} dersi için {zorluk} seviyesinde soru çöz/üret."
+            else:
+                komut = f"{ders_kontrol} sorusunu çöz: {ornek_soru}"
+            st.session_state["mob_soru"] = model.generate_content(komut).text
+        if "mob_soru" in st.session_state:
+            st.markdown(st.session_state["mob_soru"])
+
+    # SEKME 4: HESAPLA (ESKİ SİSTEM: HEDEFE GÖRE HESAPLAMA SİSTEMİ)
+    with sekme4:
+        st.subheader("📊 Harf Notu & Hedef Simülatörü")
+        
+        vize_notu = st.slider("Vize Notun Kaç?", 0, 100, 50)
+        vize_orani = st.slider("Vize Yüzdesi (%)", 10, 90, 40)
+        final_orani = 100 - vize_orani
+        st.caption(f"Sistem Etkisi: %{vize_orani} Vize - %{final_orani} Final")
+        
+        st.markdown("---")
+        st.markdown("### 🎯 Hedefe Göre Hesapla")
+        hedef_harf = st.selectbox("Hedeflediğin Harf Notu Nedir?", ["AA", "BA", "BB", "CB", "CC", "DC", "DD", "FD"])
+        
+        # Harf notu barajları
+        harf_barajlari = {"AA": 85, "BA": 80, "BB": 75, "CB": 70, "CC": 65, "DC": 60, "DD": 50, "FD": 40}
+        gereken_toplam = harf_barajlari[hedef_harf]
+        
+        vize_katkisi = vize_notu * (vize_orani / 100)
+        gereken_final = (gereken_toplam - vize_katkisi) / (final_orani / 100)
+        gereken_final = round(gereken_final, 1)
+        
+        if gereken_final <= 0:
+            st.balloons()
+            st.success(f"Kanka rahat ol! Vize notun o kadar iyi ki, Finalde **0** bile alsan hedefin olan **{hedef_harf}** geliyor! 🎉")
+        elif gereken_final > 100:
+            st.error(f"Kanka vize biraz düşük kalmış... Finalden **{gereken_final}** alman lazım yani imkansızı zorlaman gerekiyor. Hedefi CC veya DC yapmayı dene bence.")
+        else:
+            st.warning(f"Hedeflediğin **{hedef_harf}** notunu yakalamak için Final sınavından en az **{gereken_final}** alman gerekiyor kanka. Sıkı çalış!")
+
+    # SEKME 5: SOHBET ODASI
+    with sekme5:
+        st.subheader("💬 Bölüm Ortak Sohbet Odası")
+        st.caption("Aynı linki kullanan herkes buraya yazabilir. Yapay zekayı çağırmak için mesajın başına @kahin yazın!")
+        
+        if not st.session_state["chat_isim"]:
+            takma_ad = st.text_input("💬 Sohbet odası için bir Nickname (İsim) gir
