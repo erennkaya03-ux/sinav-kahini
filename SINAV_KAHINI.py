@@ -148,4 +148,89 @@ else:
         st.subheader("📌 Ders Kütüphanesi")
         if st.session_state["ders_notlari"]:
             for ders, haftalar in st.session_state["ders_notlari"].items():
-                if ders in st.session_state
+                if ders in st.session_state["secilen_dersler"]:
+                    with st.expander(f"📁 {ders}", expanded=True):
+                        for hafta, veri_listesi in sorted(haftalar.items()):
+                            st.markdown(f"**🗓️ {hafta}. Hafta**")
+                            for eleman in veri_listesi:
+                                if eleman["tip"] == "metin":
+                                    st.info(eleman['icerik'])
+                                elif eleman["tip"] == "fotograf":
+                                    st.image(eleman["icerik"], use_container_width=True)
+        else:
+            st.caption("Henüz yüklenmiş not yok.")
+
+    with sekme2:
+        st.subheader("📢 Ders Notu Yükle")
+        with st.popover("➕ Dönem Derslerini Düzenle"):
+            gecici_secimler = []
+            for sinif_adi, ders_listesi in MÜFREDAT_HAVUZU.items():
+                st.markdown(f"<div class='ders-baslik'>{sinif_adi}</div>", unsafe_allow_html=True)
+                for ders in ders_listesi:
+                    if st.checkbox(ders, value=(ders in st.session_state["secilen_dersler"]), key=f"pop_{ders}"):
+                        gecici_secimler.append(ders)
+            if st.button("Listeyi Güncelle", type="primary"):
+                if gecici_secimler:
+                    st.session_state["secilen_dersler"] = gecici_secimler
+                    st.rerun()
+        
+        st.markdown("---")
+        ders_adi = st.selectbox("Ders:", options=st.session_state["secilen_dersler"])
+        secilen_hafta = st.number_input("Hafta:", min_value=1, max_value=14, value=1)
+        ham_not = st.text_area("📝 Not ekleyin:")
+        if st.button("🚀 Gönder", use_container_width=True):
+            if ders_adi not in st.session_state["ders_notlari"]:
+                st.session_state["ders_notlari"][ders_adi] = {}
+            if secilen_hafta not in st.session_state["ders_notlari"][ders_adi]:
+                st.session_state["ders_notlari"][ders_adi][secilen_hafta] = []
+            if ham_not:
+                st.session_state["ders_notlari"][ders_adi][secilen_hafta].append({"tip": "metin", "icerik": ham_not})
+            st.success("Arşive eklendi!")
+
+    with sekme3:
+        st.subheader("📝 Yapay Zeka Soru Odası")
+        ders_kontrol = st.selectbox("Ders Seçin:", options=st.session_state["secilen_dersler"], key="sb_ders")
+        zorluk = st.select_slider("Zorluk:", options=["Kolay", "Orta", "Zor", "Hocanın Saplama Modu"])
+        ornek_soru = st.text_area("✍️ Soru Yazın (Opsiyonel):")
+        if st.button("🔮 Soruyu Çöz / Üret", use_container_width=True):
+            komut = f"{ders_kontrol} dersi için {zorluk} seviyesinde soru çöz/üret." if not ornek_soru else f"{ders_kontrol} sorusunu çöz: {ornek_soru}"
+            st.session_state["mob_soru"] = model.generate_content(komut).text
+        if "mob_soru" in st.session_state:
+            st.markdown(st.session_state["mob_soru"])
+
+    with sekme4:
+        st.subheader("📊 Harf Notu Simülatörü")
+        vize_notu = st.slider("Vize?", 0, 100, 40)
+        muhtemel_final = st.slider("Final?", 0, 100, 50)
+        ort = vize_notu*0.4 + muhtemel_final*0.6
+        st.metric("Dönem Notu:", f"{round(ort,1)}")
+
+    # --- SEKME 5: SOHBET ODASI ---
+    with sekme5:
+        st.subheader("💬 Bölüm Ortak Sohbet Odası")
+        st.caption("Aynı linki kullanan herkes buraya yazabilir. Yapay zekayı çağırmak için mesajın başına @kahin yazın!")
+        
+        if not st.session_state["chat_isim"]:
+            takma_ad = st.text_input("💬 Sohbet odası için bir Nickname (İsim) girin:", placeholder="Örn: Ahmet_100")
+            if st.button("Sohbete Katıl 🚀"):
+                if takma_ad:
+                    st.session_state["chat_isim"] = takma_ad
+                    st.rerun()
+        else:
+            st.write(f"Kullanıcı Adın: **{st.session_state['chat_isim']}**")
+            
+            # Google Sheet'ten verileri temizce çekiyoruz
+            try:
+                df = pd.read_csv(SHEET_CSV_URL)
+                if not df.empty:
+                    mesajlar = df.tail(30).to_dict(orient="records")
+                else:
+                    mesajlar = []
+            except:
+                mesajlar = []
+
+            st.markdown("---")
+            if not mesajlar:
+                st.caption("Henüz ortak mesaj yok, ilk mesajı sen yaz kanka!")
+            else:
+                for m in mesajlar:
