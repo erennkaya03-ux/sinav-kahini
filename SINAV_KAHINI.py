@@ -222,4 +222,10 @@ else:
                     if yeni_m.strip().lower().startswith("@kahin"):
                         soru = yeni_m.replace("@kahin", "").strip()
                         with st.spinner("🔮 Kahin Bot gruba yazıyor..."):
-                            bot_cevap = model.generate_content(f"Sen
+                            bot_cevap = model.generate_content(f"Sen bir üniversite grubundaki akıllı asistansın. Öğrencinin şu sorusuna gruptakilerin anlayacağı samimi ama net bir cevap yaz: {soru}").text
+                            bot_satir = {"tarih": zaman, "isim": "🔮 Kahin Bot", "mesaj": bot_cevap}
+                            st.session_state["yerel_chat"].append(bot_satir)
+                    st.rerun()
+            
+            if st.button("🔄 Sohbeti Yenile"):
+                st.rerun()
