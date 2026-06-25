@@ -286,7 +286,6 @@ else:
         st.metric(label="📊 Hesaplanan Dönem Sonu Notu:", value=f"{round(donem_notu, 1)}")
         renk(f"Tahmini Harf Notu: **{harf_notu}** — {durum}")
        # --- SOHBET BÖLÜMÜ (SEKME 5) ---
-# Burayı kodunun en altına, diğer sekmelerle aynı hizada yapıştır
 with sekme5:
     st.subheader("💬 Canlı Bölüm Sohbeti")
     
@@ -296,22 +295,26 @@ with sekme5:
             st.session_state["kullanici_ismi"] = isim
             st.rerun()
     else:
-        st.write(f"Bağlı kullanıcı: **{st.session_state['kullanici_ismi']}**")
+        st.write(f"Kullanıcı: **{st.session_state['kullanici_ismi']}**")
         
-        # Linkin
         url = "https://script.google.com/macros/s/AKfycbzgEnk0Bu94xOPFF7w-jBlYhiy6PzAOST0W_6VBjIIgdJhlvImjtSWt4qv4E1jENLyxLQ/exec"
         
-        # Mesajları çek
         try:
-            cevap = requests.get(url).json()
-            for m in cevap:
-                st.markdown(f"**{m['isim']}**: {m['mesaj']}")
-        except:
-            st.warning("Sohbet yükleniyor...")
+            # Burası Google'a bağlanmaya çalışıyor
+            response = requests.get(url, timeout=10) # 10 saniye bekle
+            if response.status_code == 200:
+                cevap = response.json()
+                for m in cevap:
+                    st.markdown(f"**{m['isim']}**: {m['mesaj']}")
+            else:
+                st.error(f"Sunucu hatası: {response.status_code}")
+        except Exception as e:
+            # Hata varsa burada kırmızılı bir kutuda yazacak
+            st.error(f"HATA: {e}")
+            st.write("Linke tıkla: [Google Linkine Git](https://script.google.com/macros/s/AKfycbzgEnk0Bu94xOPFF7w-jBlYhiy6PzAOST0W_6VBjIIgdJhlvImjtSWt4qv4E1jENLyxLQ/exec)")
             
-        # Mesaj gönder
         with st.form("chat_form", clear_on_submit=True):
-            yeni_mesaj = st.text_input("Mesajınız:")
+            yeni_mesaj = st.text_input("Mesaj:")
             if st.form_submit_button("Gönder"):
                 requests.post(url, json={"isim": st.session_state["kullanici_ismi"], "mesaj": yeni_mesaj})
                 st.rerun()
