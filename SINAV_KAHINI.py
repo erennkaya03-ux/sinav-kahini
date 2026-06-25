@@ -311,7 +311,7 @@ with sekme5:
         except Exception as e:
             # Hata varsa burada kırmızılı bir kutuda yazacak
             st.error(f"HATA: {e}")
-            st.write("Linke tıkla: [Google Linkine Git](https://script.google.com/macros/s/AKfycby2E2YzO-cnRkmnqrG5qgdaL8V3UmBXGMTBkm9PtspZpzhwjeHQm95rjIs_BMhXWP-Q9g/exec)")
+            st.write("Linke tıkla: [Google Linkine Git](https://script.google.com/macros/s/AKfycbz_uMIZzTZPKH3q0xZJeNGylurwsAE5oRdyyGCIu_FGjlG8Xb7pdChxzKgnL8_JGDkzcw/exec)")
             
         with st.form("chat_form", clear_on_submit=True):
             yeni_mesaj = st.text_input("Mesaj:")
