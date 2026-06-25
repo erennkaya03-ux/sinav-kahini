@@ -1,15 +1,15 @@
 import streamlit as st
 import google.generativeai as genai
 from datetime import datetime
-from pypdf import PdfReader
-import io
 import pandas as pd
 import requests
+import json
 
 # Sayfa Ayarları ve Mobil Görünüm Optimizasyonu
 st.set_page_config(page_title="Sınav Kahini", page_icon="🔮", layout="centered")
 
-# --- MOBİL ARAYÜZ STİL AYARLARI (CSS) ---
+# --- MOBİL ARAYÜZ VE KARANLIK/AYDINLIK MOD STİL AYARLARI (CSS) ---
+# Yazı ve kutu renklerini sabitleyerek her iki modda da net görünmesini sağlıyoruz.
 st.markdown("""
 <style>
     .stButton>button {
@@ -27,19 +27,36 @@ st.markdown("""
     }
     .ders-baslik {
         font-weight: bold;
-        color: #1E88E5;
+        color: #1E88E5 !important;
         margin-top: 10px;
         margin-bottom: 5px;
         border-bottom: 1px solid #ddd;
         padding-bottom: 2px;
     }
+    /* Sohbet Kutuları ve Yazı Renkleri Sabitleme */
     .chat-box {
-        padding: 10px;
+        padding: 12px;
         border-radius: 10px;
         margin-bottom: 8px;
+        color: #111111 !important; /* Karanlık modda bile yazılar simsiyah ve net kalır */
+        font-size: 14px;
+        line-height: 1.4;
     }
-    .chat-user { background-color: #F0F2F6; border-left: 5px solid #1E88E5; }
-    .chat-kahin { background-color: #FFF3CD; border-left: 5px solid #FFC107; font-style: italic; }
+    .chat-user { 
+        background-color: #E3F2FD !important; 
+        border-left: 5px solid #1E88E5 !important; 
+    }
+    .chat-kahin { 
+        background-color: #FFF9C4 !important; 
+        border-left: 5px solid #FBC02D !important; 
+        font-style: italic; 
+    }
+    .chat-box b {
+        color: #0D47A1 !important; /* İsimler koyu mavi renk olur */
+    }
+    .chat-kahin b {
+        color: #F57F17 !important; /* Kahin bot ismi koyu turuncu olur */
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -90,19 +107,18 @@ MÜFREDAT_HAVUZU = {
 if "secilen_dersler" not in st.session_state:
     st.session_state["secilen_dersler"] = ["Finansal Muhasebe I", "Finansal Muhasebe II", "Ticaret Hukuku"]
 
-HESAP_PLANI = {"100": "KASA", "101": "ALINAN ÇEKLER", "102": "BANKALAR", "103": "VERİLEN ÇEKLER (-)", "120": "ALICILAR", "121": "ALACAK SENETLERİ", "153": "TİCARİ MALLAR", "191": "İNDİRİLECEK KDV", "254": "TAŞITLAR", "255": "DEMİRBAŞLAR", "257": "BİRİKMİŞ AMORTİSMANLAR (-)", "320": "SATICILAR", "321": "BORÇ SENETLERİ", "391": "HESAPLANAN KDV", "500": "SERMAYE", "600": "YURTİÇİ SATIŞLAR", "621": "STMM (-)", "770": "GENEL YÖNETİM GİDERLERİ"}
-
-# --- GOOGLE SHEETS VERİTABANI BAĞLANTI AYARI ---
+# --- GOOGLE SHEETS BAĞLANTISI ---
 SHEET_ID = "1qjPw6aNw1PFREblbFCd8ZZ5LnlxnmBLbDMLuV5dMb1I"
 SHEET_CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv"
 
-# --- MESAJI GERÇEKTEN BULUTA YAZMA FONKSİYONU ---
+# Senin gönderdiğin canlı Apps Script linkini buraya başarıyla gömdüm kanka!
+APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzUKYurF1P5XA1fsgj4jOfWHzG1F9I8V3VmtZeJfAXLcdyZStX1PPsefg7XKQvz1CD1mg/exec"
+
+# --- MESAJI BULUTA YAZMA FONKSİYONU ---
 def buluta_mesaj_yaz(tarih, isim, mesaj):
     try:
-        # Streamlit'in doğrudan Google Sheets bağlantı mekanizmasını simüle ediyoruz
-        # Tabloya veri yazabilmek için basit bir web request yapısı kullanıyoruz
-        # Not: Eğer doğrudan basma başarısız olursa sistem çökmez, yerel moda devam eder.
-        pass
+        payload = {"tarih": tarih, "isim": isim, "mesaj": mesaj}
+        requests.post(APPS_SCRIPT_URL, data=json.dumps(payload))
     except:
         pass
 
@@ -205,48 +221,22 @@ else:
             st.write(f"Kullanıcı Adın: **{st.session_state['chat_isim']}**")
             
             # Google Sheet'ten güncel verileri çekme denemesi
-            if "yerel_chat" not in st.session_state:
-                st.session_state["yerel_chat"] = []
-                
             try:
                 df = pd.read_csv(SHEET_CSV_URL)
-                # Google Sheet verisi boş değilse onu kullan, boşsa yerele düş
                 if not df.empty:
                     mesajlar = df.tail(30).to_dict(orient="records")
                 else:
-                    mesajlar = st.session_state["yerel_chat"]
+                    mesajlar = []
             except:
-                mesajlar = st.session_state["yerel_chat"]
+                mesajlar = []
 
             st.markdown("---")
             if not mesajlar:
-                st.caption("Henüz mesaj yok, ilk mesajı sen yaz kanka!")
+                st.caption("Henüz ortak mesaj yok, ilk mesajı sen yaz kanka veya sayfayı yenile!")
             else:
                 for m in mesajlar:
-                    cls = "chat-kahin" if m.get('isim') == "🔮 Kahin Bot" else "chat-user"
+                    cls = "chat-kahin" if str(m.get('isim')) == "🔮 Kahin Bot" else "chat-user"
                     st.markdown(f"<div class='chat-box {cls}'><b>{m.get('isim', 'Anonim')}:</b> {m.get('mesaj', '')}</div>", unsafe_allow_html=True)
             st.markdown("---")
 
-            yeni_m = st.text_input("✉️ Mesajınızı yazın:", placeholder="Beyler vize soruları nasıldı?", key="chat_input")
-            
-            if st.button("Gönder ✉️", use_container_width=True):
-                if yeni_m:
-                    zaman = datetime.now().strftime("%H:%M")
-                    yeni_satir = {"tarih": zaman, "isim": st.session_state["chat_isim"], "mesaj": yeni_m}
-                    
-                    # Hem yerel hafızaya ekle hem de buluta yazmayı dene
-                    st.session_state["yerel_chat"].append(yeni_satir)
-                    buluta_mesaj_yaz(zaman, st.session_state["chat_isim"], yeni_m)
-
-                    # --- YAPAY ZEKA BOT TETİKLEMESİ ---
-                    if yeni_m.strip().lower().startswith("@kahin"):
-                        soru = yeni_m.replace("@kahin", "").strip()
-                        with st.spinner("🔮 Kahin Bot gruba yazıyor..."):
-                            bot_cevap = model.generate_content(f"Sen bir üniversite grubundaki akıllı asistansın. Öğrencinin şu sorusuna gruptakilerin anlayacağı samimi ama net bir cevap yaz: {soru}").text
-                            bot_satir = {"tarih": zaman, "isim": "🔮 Kahin Bot", "mesaj": bot_cevap}
-                            st.session_state["yerel_chat"].append(bot_satir)
-                            buluta_mesaj_yaz(zaman, "🔮 Kahin Bot", bot_cevap)
-                    st.rerun()
-            
-            if st.button("🔄 Sohbeti Yenile"):
-                st.rerun()
+            yeni_m = st.text_
