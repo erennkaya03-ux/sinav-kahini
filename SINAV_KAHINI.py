@@ -152,13 +152,11 @@ else:
     # --- 5 SEKME SİSTEMİ ---
     sekme1, sekme2, sekme3, sekme4, sekme5 = st.tabs(["📁 Arşiv", "📢 Not Yükle", "📝 Soru Odası", "📊 Hesapla", "💬 Bölüm Chat"])
 
-    # SEKME 1: ARŞİV (YENİLENDİ - ARTIK DERSLER HEP GÖZÜKECEK)
+    # SEKME 1: ARŞİV
     with sekme1:
         st.subheader("📌 Ders Kütüphanesi")
-        # Seçilen dersleri dönüyoruz, hafıza boş olsa bile klasörler açılacak
         for ders in st.session_state["secilen_dersler"]:
             with st.expander(f"📁 {ders}", expanded=True):
-                # Bu derse ait bir not girilmiş mi kontrol et
                 if ders in st.session_state["ders_notlari"] and st.session_state["ders_notlari"][ders]:
                     for hafta, veri_listesi in sorted(st.session_state["ders_notlari"][ders].items()):
                         st.markdown(f"**🗓️ {hafta}. Hafta**")
@@ -211,7 +209,7 @@ else:
         if "mob_soru" in st.session_state:
             st.markdown(st.session_state["mob_soru"])
 
-    # SEKME 4: HESAPLA (ESKİ SİSTEM: HEDEFE GÖRE HESAPLAMA SİSTEMİ)
+    # SEKME 4: HESAPLA
     with sekme4:
         st.subheader("📊 Harf Notu & Hedef Simülatörü")
         
@@ -224,7 +222,6 @@ else:
         st.markdown("### 🎯 Hedefe Göre Hesapla")
         hedef_harf = st.selectbox("Hedeflediğin Harf Notu Nedir?", ["AA", "BA", "BB", "CB", "CC", "DC", "DD", "FD"])
         
-        # Harf notu barajları
         harf_barajlari = {"AA": 85, "BA": 80, "BB": 75, "CB": 70, "CC": 65, "DC": 60, "DD": 50, "FD": 40}
         gereken_toplam = harf_barajlari[hedef_harf]
         
@@ -240,10 +237,29 @@ else:
         else:
             st.warning(f"Hedeflediğin **{hedef_harf}** notunu yakalamak için Final sınavından en az **{gereken_final}** alman gerekiyor kanka. Sıkı çalış!")
 
-    # SEKME 5: SOHBET ODASI
+    # --- SEKME 5: SOHBET ODASI ---
     with sekme5:
         st.subheader("💬 Bölüm Ortak Sohbet Odası")
         st.caption("Aynı linki kullanan herkes buraya yazabilir. Yapay zekayı çağırmak için mesajın başına @kahin yazın!")
         
         if not st.session_state["chat_isim"]:
-            takma_ad = st.text_input("💬 Sohbet odası için bir Nickname (İsim) gir
+            takma_ad = st.text_input("💬 Sohbet odası için bir Nickname (İsim) girin:", placeholder="Örn: Ahmet_100")
+            if st.button("Sohbete Katıl 🚀"):
+                if takma_ad:
+                    st.session_state["chat_isim"] = takma_ad
+                    st.rerun()
+        else:
+            st.write(f"Kullanıcı Adın: **{st.session_state['chat_isim']}**")
+            
+            try:
+                df = pd.read_csv(SHEET_CSV_URL)
+                if not df.empty:
+                    mesajlar = df.tail(30).to_dict(orient="records")
+                else:
+                    mesajlar = []
+            except:
+                mesajlar = []
+
+            st.markdown("---")
+            if not mesajlar:
+                st.caption("Henüz ortak mesaj yok, ilk mesajı sen yaz
