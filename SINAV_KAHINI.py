@@ -9,7 +9,6 @@ import json
 st.set_page_config(page_title="Sınav Kahini", page_icon="🔮", layout="centered")
 
 # --- MOBİL ARAYÜZ VE KARANLIK/AYDINLIK MOD STİL AYARLARI (CSS) ---
-# Yazı ve kutu renklerini sabitleyerek her iki modda da net görünmesini sağlıyoruz.
 st.markdown("""
 <style>
     .stButton>button {
@@ -38,7 +37,7 @@ st.markdown("""
         padding: 12px;
         border-radius: 10px;
         margin-bottom: 8px;
-        color: #111111 !important; /* Karanlık modda bile yazılar simsiyah ve net kalır */
+        color: #111111 !important; 
         font-size: 14px;
         line-height: 1.4;
     }
@@ -52,10 +51,10 @@ st.markdown("""
         font-style: italic; 
     }
     .chat-box b {
-        color: #0D47A1 !important; /* İsimler koyu mavi renk olur */
+        color: #0D47A1 !important; 
     }
     .chat-kahin b {
-        color: #F57F17 !important; /* Kahin bot ismi koyu turuncu olur */
+        color: #F57F17 !important; 
     }
 </style>
 """, unsafe_allow_html=True)
@@ -111,7 +110,6 @@ if "secilen_dersler" not in st.session_state:
 SHEET_ID = "1qjPw6aNw1PFREblbFCd8ZZ5LnlxnmBLbDMLuV5dMb1I"
 SHEET_CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv"
 
-# Senin gönderdiğin canlı Apps Script linkini buraya başarıyla gömdüm kanka!
 APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzUKYurF1P5XA1fsgj4jOfWHzG1F9I8V3VmtZeJfAXLcdyZStX1PPsefg7XKQvz1CD1mg/exec"
 
 # --- MESAJI BULUTA YAZMA FONKSİYONU ---
@@ -239,4 +237,23 @@ else:
                     st.markdown(f"<div class='chat-box {cls}'><b>{m.get('isim', 'Anonim')}:</b> {m.get('mesaj', '')}</div>", unsafe_allow_html=True)
             st.markdown("---")
 
-            yeni_m = st.text_
+            # Hatayı çözen kritik düzeltme burası kanka: st.text_input yapıldı
+            yeni_m = st.text_input("✉️ Mesajınızı yazın:", placeholder="Beyler vize soruları nasıldı?", key="chat_input")
+            
+            if st.button("Gönder ✉️", use_container_width=True):
+                if yeni_m:
+                    zaman = datetime.now().strftime("%H:%M")
+                    
+                    # Doğrudan buluta yazıyoruz
+                    buluta_mesaj_yaz(zaman, st.session_state["chat_isim"], yeni_m)
+
+                    # --- YAPAY ZEKA BOT TETİKLEMESİ ---
+                    if yeni_m.strip().lower().startswith("@kahin"):
+                        soru = yeni_m.replace("@kahin", "").strip()
+                        with st.spinner("🔮 Kahin Bot gruba yazıyor..."):
+                            bot_cevap = model.generate_content(f"Sen bir üniversite grubundaki akıllı asistansın. Öğrencinin şu sorusuna gruptakilerin anlayacağı samimi ama net bir cevap yaz: {soru}").text
+                            buluta_mesaj_yaz(zaman, "🔮 Kahin Bot", bot_cevap)
+                    st.rerun()
+            
+            if st.button("🔄 Sohbeti Yenile"):
+                st.rerun()
