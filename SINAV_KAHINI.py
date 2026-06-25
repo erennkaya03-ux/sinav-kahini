@@ -3,11 +3,6 @@ import google.generativeai as genai
 from datetime import datetime
 from pypdf import PdfReader
 import io
-from streamlit_autorefresh import st_autorefresh
-import requests
-
-# SEKME TANIMLAMALARINI DOSYANIN EN ÜSTÜNDE, HİÇBİR YERİN İÇİNE SOKMADAN YAP:
-sekme1, sekme2, sekme3, sekme4, sekme5 = st.tabs(["Arşiv", "Not Yükle", "Soru Odası", "Hesapla", "Sohbet"])
 
 # Sayfa Ayarları ve Mobil Görünüm Optimizasyonu
 st.set_page_config(page_title="Sınav Kahini", page_icon="🔮", layout="centered")
@@ -113,7 +108,7 @@ else:
     st.markdown("---")
 
     # --- MOBİL ÜST SEKME SİSTEMİ ---
-    sekme1, sekme2, sekme3, sekme4, sekme5 = st.tabs(["📁 Arşiv", "📢 Not/PDF Yükle", "📝 Soru Odası", "📊 Hesapla", "💬 Sohbet"])
+    sekme1, sekme2, sekme3, sekme4 = st.tabs(["📁 Arşiv", "📢 Not/PDF Yükle", "📝 Soru Odası", "📊 Hesapla"])
 
     # SEKME 1: DERS ARŞİVİ
     with sekme1:
@@ -288,25 +283,3 @@ else:
 
         st.metric(label="📊 Hesaplanan Dönem Sonu Notu:", value=f"{round(donem_notu, 1)}")
         renk(f"Tahmini Harf Notu: **{harf_notu}** — {durum}")
-       # --- SOHBET BÖLÜMÜ (SEKME 5) ---
-with sekme5:
-    st.subheader("💬 Canlı Sohbet")
-    url = "https://script.google.com/macros/s/AKfycbwfyEIa0OFcnhrcHaIQuTZX5AMRIA4aT0rggEhZlIoTcAc98PPwaB4c5CkRIuVclfEHPQ/exec"
-    
-    # ... (İsim kısmı aynı kalsın) ...
-    
-    try:
-        r = requests.get(url)
-        # BURAYA BAK: Gelen cevap JSON mı değil mi?
-        if r.status_code == 200:
-            try:
-                mesajlar = r.json()
-                for m in mesajlar:
-                    st.markdown(f"**{m.get('isim')}**: {m.get('mesaj')}")
-            except:
-                st.error("Sunucudan veri geldi ama JSON değil!")
-                st.write("Gelen ham veri:", r.text) # Hatanın ne olduğunu ekrana yazdır
-        else:
-            st.error(f"Sunucu hatası: {r.status_code}")
-    except Exception as e:
-        st.error(f"Bağlantı hatası: {e}")
