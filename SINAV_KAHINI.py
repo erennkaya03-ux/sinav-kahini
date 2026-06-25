@@ -291,24 +291,36 @@ else:
        # --- SOHBET BÖLÜMÜ (SEKME 5) ---
 with sekme5:
     st.subheader("💬 Canlı Sohbet")
-    url = "https://script.google.com/macros/s/AKfycby2E2YzO-cnRkmnqrG5qgdaL8V3UmBXGMTBkm9PtspZpzhwjeHQm95rjIs_BMhXWP-Q9g/exec"
+    # Yeni linkin burada
+    url = "https://script.google.com/macros/s/AKfycbwfyEIa0OFcnhrcHaIQuTZX5AMRIA4aT0rggEhZlIoTcAc98PPwaB4c5CkRIuVclfEHPQ/exec"
     
     if "kullanici_ismi" not in st.session_state:
-        st.session_state["kullanici_ismi"] = st.text_input("Sohbet için ismini yaz:")
+        st.session_state["kullanici_ismi"] = st.text_input("Sohbete girmek için ismini yaz:")
     else:
         st.write(f"Kullanıcı: **{st.session_state['kullanici_ismi']}**")
         
-        # Mesajları Çek
+        # 1. MESAJLARI ÇEK
         try:
             r = requests.get(url, timeout=5)
             mesajlar = r.json()
             for m in mesajlar:
                 st.markdown(f"**{m['isim']}**: {m['mesaj']}")
         except:
-            st.write("Henüz mesaj yok.")
+            st.write("Henüz mesaj yok veya sunucu yanıt vermedi.")
             
-        # Mesaj Gönder
+        # 2. MESAJ GÖNDER
         yeni_mesaj = st.text_input("Mesajın:")
         if st.button("Gönder"):
-            requests.post(url, json={"isim": st.session_state["kullanici_ismi"], "mesaj": yeni_mesaj})
-            st.rerun()
+            if yeni_mesaj:
+                try:
+                    payload = {"isim": st.session_state["kullanici_ismi"], "mesaj": yeni_mesaj}
+                    response = requests.post(url, json=payload)
+                    if response.status_code == 200:
+                        st.success("Mesaj gönderildi!")
+                        st.rerun() # Sayfayı yenile ki mesaj hemen görünsün
+                    else:
+                        st.error(f"Hata kodu: {response.status_code}")
+                except Exception as e:
+                    st.error(f"Bağlantı hatası: {e}")
+            else:
+                st.warning("Mesaj boş olamaz!")
