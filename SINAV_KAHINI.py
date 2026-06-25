@@ -107,17 +107,19 @@ MÜFREDAT_HAVUZU = {
 if "secilen_dersler" not in st.session_state:
     st.session_state["secilen_dersler"] = ["Finansal Muhasebe I", "Finansal Muhasebe II", "Ticaret Hukuku"]
 
-# --- GOOGLE SHEETS BAĞLANTISI ---
+# --- GOOGLE SHEETS VE APPS SCRIPT BAĞLANTILARI ---
+SHEETS_YENI_LINK = "https://script.google.com/macros/s/AKfycbzExJPw5JDjfzInJ3_sPwNfv5en7aIVsl29vMHCtQlLIJq1fgZmxZrDDi6Y4SaYw6XuQA/exec"
 SHEET_ID = "1qjPw6aNw1PFREblbFCd8ZZ5LnlxnmBLbDMLuV5dMb1I"
-SHEET_CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv"
 
-APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzUKYurF1P5XA1fsgj4jOfWHzG1F9I8V3VmtZeJfAXLcdyZStX1PPsefg7XKQvz1CD1mg/exec"
+# Google'ın verileri önbelleğe (cache) alıp eskiyi göstermesini engellemek için her saniye değişen bir parametre ekliyoruz
+anlik_zaman = int(time.time())
+SHEET_CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&cache_bust={anlik_zaman}"
 
 # --- MESAJI BULUTA YAZMA FONKSİYONU ---
-def buluta_mesaj_yaz(tarih,合理, mesaj):
+def buluta_mesaj_yaz(tarih, isim, mesaj):
     try:
-        payload = {"tarih": tarih, "isim":合理, "mesaj": mesaj}
-        requests.post(APPS_SCRIPT_URL, data=json.dumps(payload))
+        payload = {"tarih": tarih, "isim": isim, "mesaj": mesaj}
+        requests.post(SHEETS_YENI_LINK, data=json.dumps(payload))
     except:
         pass
 
@@ -193,76 +195,4 @@ else:
         zorluk = st.select_slider("Zorluk:", options=["Kolay", "Orta", "Zor", "Hocanın Saplama Modu"])
         ornek_soru = st.text_area("✍️ Soru Yazın (Opsiyonel):")
         if st.button("🔮 Soruyu Çöz / Üret", use_container_width=True):
-            komut = f"{ders_kontrol} dersi için {zorluk} seviyesinde soru çöz/üret." if not ornek_soru else f"{ders_kontrol} sorusunu çöz: {ornek_soru}"
-            st.session_state["mob_soru"] = model.generate_content(komut).text
-        if "mob_soru" in st.session_state:
-            st.markdown(st.session_state["mob_soru"])
-
-    with sekme4:
-        st.subheader("📊 Harf Notu Simülatörü")
-        vize_notu = st.slider("Vize?", 0, 100, 40)
-        muhtemel_final = st.slider("Final?", 0, 100, 50)
-        ort = vize_notu*0.4 + muhtemel_final*0.6
-        st.metric("Dönem Notu:", f"{round(ort,1)}")
-
-    # --- SEKME 5: SOHBET ODASI ---
-    with sekme5:
-        st.subheader("💬 Bölüm Ortak Sohbet Odası")
-        st.caption("Aynı linki kullanan herkes buraya yazabilir. Yapay zekayı çağırmak için mesajın başına @kahin yazın!")
-        
-        if not st.session_state["chat_isim"]:
-            takma_ad = st.text_input("💬 Sohbet odası için bir Nickname (İsim) girin:", placeholder="Örn: Ahmet_100")
-            if st.button("Sohbete Katıl 🚀"):
-                if takma_ad:
-                    st.session_state["chat_isim"] = takma_ad
-                    st.rerun()
-        else:
-            st.write(f"Kullanıcı Adın: **{st.session_state['chat_isim']}**")
-            
-            try:
-                df = pd.read_csv(SHEET_CSV_URL)
-                if not df.empty:
-                    mesajlar = df.tail(30).to_dict(orient="records")
-                else:
-                    mesajlar = []
-            except:
-                mesajlar = []
-
-            st.markdown("---")
-            if not mesajlar:
-                st.caption("Henüz ortak mesaj yok, ilk mesajı sen yaz kanka!")
-            else:
-                for m in mesajlar:
-                    cls = "chat-kahin" if str(m.get('isim')) == "🔮 Kahin Bot" else "chat-user"
-                    st.markdown(f"<div class='chat-box {cls}'><b>{m.get('isim', 'Anonim')}:</b> {m.get('mesaj', '')}</div>", unsafe_allow_html=True)
-            st.markdown("---")
-
-            yeni_m = st.text_input("✉️ Mesajınızı yazın:", placeholder="Beyler vize soruları nasıldı?", key="chat_input")
-            
-            if st.button("Gönder ✉️", use_container_width=True):
-                if yeni_m:
-                    zaman = datetime.now().strftime("%H:%M")
-                    buluta_mesaj_yaz(zaman, st.session_state["chat_isim"], yeni_m)
-
-                    if yeni_m.strip().lower().startswith("@kahin"):
-                        soru = yeni_m.replace("@kahin", "").strip()
-                        with st.spinner("🔮 Kahin Bot gruba yazıyor..."):
-                            bot_cevap = model.generate_content(f"Sen bir üniversite grubundaki akıllı asistansın. Öğrencinin şu sorusuna gruptakilerin anlayacağı samimi ama net bir cevap yaz: {soru}").text
-                            buluta_mesaj_yaz(zaman, "🔮 Kahin Bot", bot_cevap)
-                    st.rerun()
-            
-            if st.button("🔄 Sohbeti Yenile / SMS Modu"):
-                st.rerun()
-            
-            # --- YÖNETİCİ ARAÇLARI (SOHBETİ TEMİZLEME ALANI) ---
-            st.markdown("<br><br>", unsafe_allow_html=True)
-            with st.expander("⚙️ Yönetici Araçları"):
-                admin_sifre = st.text_input("Gizli Admin Şifresini Girin:", type="password", key="admin_sifre_input")
-                if admin_sifre == "kahin123":
-                    if st.button("🗑️ TÜM SOHBETİ SIFIRLA", type="primary"):
-                        buluta_mesaj_yaz("CLEAR_CHAT", "SYSTEM", "ALL_MESSAGES")
-                        st.success("Sohbet başarıyla sıfırlandı!")
-                        time.sleep(1)
-                        st.rerun()
-                elif admin_sifre:
-                    st.error("Hatalı şifre girdin kanka!")
+            komut = f"{ders_kontrol} dersi için {zorluk} seviyes
