@@ -4,7 +4,10 @@ from datetime import datetime
 from pypdf import PdfReader
 import io
 from streamlit_autorefresh import st_autorefresh
-import requests  # <-- EKSİK OLAN BU! Bunu mutlaka ekle.
+import requests
+
+# SEKME TANIMLAMALARINI DOSYANIN EN ÜSTÜNDE, HİÇBİR YERİN İÇİNE SOKMADAN YAP:
+sekme1, sekme2, sekme3, sekme4, sekme5 = st.tabs(["Arşiv", "Not Yükle", "Soru Odası", "Hesapla", "Sohbet"])
 
 # Sayfa Ayarları ve Mobil Görünüm Optimizasyonu
 st.set_page_config(page_title="Sınav Kahini", page_icon="🔮", layout="centered")
@@ -287,34 +290,25 @@ else:
         renk(f"Tahmini Harf Notu: **{harf_notu}** — {durum}")
        # --- SOHBET BÖLÜMÜ (SEKME 5) ---
 with sekme5:
-    st.subheader("💬 Canlı Bölüm Sohbeti")
+    st.subheader("💬 Canlı Sohbet")
+    url = "https://script.google.com/macros/s/AKfycby2E2YzO-cnRkmnqrG5qgdaL8V3UmBXGMTBkm9PtspZpzhwjeHQm95rjIs_BMhXWP-Q9g/exec"
     
     if "kullanici_ismi" not in st.session_state:
-        isim = st.text_input("Sohbete girmek için isminiz:")
-        if st.button("Sohbete Katıl"):
-            st.session_state["kullanici_ismi"] = isim
-            st.rerun()
+        st.session_state["kullanici_ismi"] = st.text_input("Sohbet için ismini yaz:")
     else:
         st.write(f"Kullanıcı: **{st.session_state['kullanici_ismi']}**")
         
-        url = "https://script.google.com/macros/s/AKfycbzgEnk0Bu94xOPFF7w-jBlYhiy6PzAOST0W_6VBjIIgdJhlvImjtSWt4qv4E1jENLyxLQ/exec"
-        
+        # Mesajları Çek
         try:
-            # Burası Google'a bağlanmaya çalışıyor
-            response = requests.get(url, timeout=10) # 10 saniye bekle
-            if response.status_code == 200:
-                cevap = response.json()
-                for m in cevap:
-                    st.markdown(f"**{m['isim']}**: {m['mesaj']}")
-            else:
-                st.error(f"Sunucu hatası: {response.status_code}")
-        except Exception as e:
-            # Hata varsa burada kırmızılı bir kutuda yazacak
-            st.error(f"HATA: {e}")
-            st.write("Linke tıkla: [Google Linkine Git](https://script.google.com/macros/s/AKfycbyQVzF_2ww2imo8b3tM4RtZDFqf4ru4tTSW42TB5r9wxG-mcToM39EZzXdNzmM_DJBXdA/exec)")
+            r = requests.get(url, timeout=5)
+            mesajlar = r.json()
+            for m in mesajlar:
+                st.markdown(f"**{m['isim']}**: {m['mesaj']}")
+        except:
+            st.write("Henüz mesaj yok.")
             
-        with st.form("chat_form", clear_on_submit=True):
-            yeni_mesaj = st.text_input("Mesaj:")
-            if st.form_submit_button("Gönder"):
-                requests.post(url, json={"isim": st.session_state["kullanici_ismi"], "mesaj": yeni_mesaj})
-                st.rerun()
+        # Mesaj Gönder
+        yeni_mesaj = st.text_input("Mesajın:")
+        if st.button("Gönder"):
+            requests.post(url, json={"isim": st.session_state["kullanici_ismi"], "mesaj": yeni_mesaj})
+            st.rerun()
