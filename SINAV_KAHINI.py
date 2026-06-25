@@ -284,57 +284,53 @@ else:
         st.metric(label="📊 Hesaplanan Dönem Sonu Notu:", value=f"{round(donem_notu, 1)}")
         renk(f"Tahmini Harf Notu: **{harf_notu}** — {durum}")
         # --- YENİ EKLENEN CHAT BÖLÜMÜ ---
-   # --- YÖNETİCİ MODLU CHAT ---
-    with sekme5:
-        st.subheader("💬 Bölüm Sohbeti")
-        
-        # 1. Susturulanlar Listesi
-        if "susturulanlar" not in st.session_state: st.session_state["susturulanlar"] = []
-        
-        # 2. İsim Alma
-        if "kullanici_ismi" not in st.session_state:
-            isim = st.text_input("Sohbete katılmak için isminiz nedir?")
-            if st.button("Sohbete Katıl"):
-                if isim:
-                    st.session_state["kullanici_ismi"] = isim
-                    st.rerun()
-        else:
-            # Susturma kontrolü
-            if st.session_state["kullanici_ismi"] in st.session_state["susturulanlar"]:
-                st.error("🚫 Yönetici tarafından susturuldunuz. Sohbete yazamazsınız.")
-            else:
-                st.write(f"Hoş geldin, **{st.session_state['kullanici_ismi']}**!")
-            
-            # Mesaj geçmişi
-            if "mesajlar" not in st.session_state: st.session_state["mesajlar"] = []
-            
-            for m in st.session_state["mesajlar"]:
-                st.write(m)
-            
-            # Sadece susturulmamış olanlar yazabilir
-            if st.session_state["kullanici_ismi"] not in st.session_state["susturulanlar"]:
-                with st.form(key='chat_form', clear_on_submit=True):
-                    yeni_mesaj = st.text_input("Mesajını yaz:")
-                    if st.form_submit_button("Gönder") and yeni_mesaj:
-                        st.session_state["mesajlar"].append(f"**{st.session_state['kullanici_ismi']}**: {yeni_mesaj}")
-                        st.rerun()
+  from streamlit_autorefresh import st_autorefresh
+import requests
 
-            # 3. YÖNETİCİ PANELİ (Gelişmiş)
-            st.markdown("---")
-            with st.expander("⚙️ Yönetici Paneli"):
-                sifre = st.text_input("Şifre:", type="password")
-                if sifre == "admin123":
-                    # Kişi susturma
-                    susturulacak = st.selectbox("Susturulacak kişiyi seç:", options=[m.split(":")[0].replace("**", "") for m in st.session_state["mesajlar"]])
-                    if st.button("🚫 Bu Kişiyi Sustur"):
-                        if susturulacak not in st.session_state["susturulanlar"]:
-                            st.session_state["susturulanlar"].append(susturulacak)
-                            st.success(f"{susturulacak} susturuldu!")
-                            st.rerun()
-                    
-                    # Sohbeti temizle
-                    if st.button("🗑️ Sohbeti Komple Sil"):
-                        st.session_state["mesajlar"] = []
-                        st.rerun()
-                elif sifre:
-                    st.error("Hatalı şifre!")
+# Sohbeti 1 saniyede bir yeniler
+st_autorefresh(interval=1000, key="datarefresh")
+
+with sekme5:
+    st.subheader("💬 Canlı Bölüm Sohbeti")
+    
+    # 1. İsim girişi (WhatsApp'taki profil adı gibi)
+    if "kullanici_ismi" not in st.session_state:
+        isim = st.text_input("Sohbete girmek için isminiz:")
+        if st.button("Giriş Yap"):
+            st.session_state["kullanici_ismi"] = isim
+            st.rerun()
+    else:
+        st.write(f"Bağlı kullanıcı: **{st.session_state['kullanici_ismi']}**")
+        
+        # 2. Mesajları Çek (Senin linkin üzerinden)
+        url = "https://script.google.com/macros/s/AKfycbzExJPw5JDjfzInJ3_sPwNfv5en7aIVsl29vMHCtQlLIJq1fgZmxZrDDi6Y4SaYw6XuQA/exec"
+        try:
+            cevap = requests.get(url).json()
+            st.markdown("<div style='height: 300px; overflow-y: scroll; padding: 10px; background: #f0f2f6; border-radius: 10px;'>", unsafe_allow_html=True)
+            for mesaj in cevap:
+                # WhatsApp stili mesaj balonları
+                align = "flex-end" if mesaj['isim'] == st.session_state["kullanici_ismi"] else "flex-start"
+                color = "#DCF8C6" if mesaj['isim'] == st.session_state["kullanici_ismi"] else "#FFFFFF"
+                st.markdown(f"""
+                    <div style='display:flex; justify-content:{align}; margin-bottom:5px;'>
+                        <div style='background:{color}; padding:8px 12px; border-radius:15px; max-width:70%;'>
+                            <small style='color:gray;'>{mesaj['isim']}</small><br>{mesaj['mesaj']}
+                        </div>
+                    </div>
+                """, unsafe_allow_html=True)
+            st.markdown("</div>", unsafe_allow_html=True)
+        except:
+            st.error("Mesajlar yüklenirken bir hata oluştu.")
+
+        # 3. Mesaj Gönderme (WhatsApp stili)
+        with st.form("mesaj_formu", clear_on_submit=True):
+            yeni_mesaj = st.text_input("Bir şeyler yaz...")
+            if st.form_submit_button("Gönder"):
+                requests.post(url, json={"isim": st.session_state["kullanici_ismi"], "mesaj": yeni_mesaj})
+                st.rerun()
+
+        # 4. Yönetici Paneli
+        with st.expander("⚙️ Yönetici"):
+            if st.button("🗑️ Sohbeti Temizle"):
+                requests.post(url, json={"action": "clear"})
+                st.rerun()
