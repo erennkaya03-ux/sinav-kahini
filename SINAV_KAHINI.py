@@ -284,36 +284,33 @@ else:
 
         st.metric(label="📊 Hesaplanan Dönem Sonu Notu:", value=f"{round(donem_notu, 1)}")
         renk(f"Tahmini Harf Notu: **{harf_notu}** — {durum}")
-        # --- YENİ EKLENEN CHAT BÖLÜMÜ ---
+       # --- SOHBET BÖLÜMÜ (SEKME 5) ---
+# Burayı kodunun en altına, diğer sekmelerle aynı hizada yapıştır
 with sekme5:
     st.subheader("💬 Canlı Bölüm Sohbeti")
     
-    # 1. İsmi kaydet
     if "kullanici_ismi" not in st.session_state:
         isim = st.text_input("Sohbete girmek için isminiz:")
         if st.button("Sohbete Katıl"):
             st.session_state["kullanici_ismi"] = isim
             st.rerun()
     else:
-        # 1 saniyede bir sayfayı yeniler
-        st_autorefresh(interval=1000, key="chat_refresh")
+        st.write(f"Bağlı kullanıcı: **{st.session_state['kullanici_ismi']}**")
         
-        st.write(f"Kullanıcı: **{st.session_state['kullanici_ismi']}**")
+        # Linkin
+        url = "https://script.google.com/macros/s/AKfycbzgEnk0Bu94xOPFF7w-jBlYhiy6PzAOST0W_6VBjIIgdJhlvImjtSWt4qv4E1jENLyxLQ/exec"
         
-        # 2. Mesajları Google Sheets'ten çek
+        # Mesajları çek
         try:
-            url = "https://script.google.com/macros/s/AKfycbzgEnk0Bu94xOPFF7w-jBlYhiy6PzAOST0W_6VBjIIgdJhlvImjtSWt4qv4E1jENLyxLQ/exec"
             cevap = requests.get(url).json()
-            
-            # Mesaj kutusu alanı
             for m in cevap:
                 st.markdown(f"**{m['isim']}**: {m['mesaj']}")
         except:
             st.warning("Sohbet yükleniyor...")
             
-        # 3. Mesaj gönder
+        # Mesaj gönder
         with st.form("chat_form", clear_on_submit=True):
-            yeni_mesaj = st.text_input("Mesaj yaz:")
+            yeni_mesaj = st.text_input("Mesajınız:")
             if st.form_submit_button("Gönder"):
                 requests.post(url, json={"isim": st.session_state["kullanici_ismi"], "mesaj": yeni_mesaj})
                 st.rerun()
