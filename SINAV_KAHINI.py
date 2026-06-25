@@ -114,9 +114,9 @@ SHEET_CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=
 APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzUKYurF1P5XA1fsgj4jOfWHzG1F9I8V3VmtZeJfAXLcdyZStX1PPsefg7XKQvz1CD1mg/exec"
 
 # --- MESAJI BULUTA YAZMA FONKSİYONU ---
-def buluta_mesaj_yaz(tarih, isim, mesaj):
+def buluta_mesaj_yaz(tarih,合理, mesaj):
     try:
-        payload = {"tarih": tarih, "isim": isim, "mesaj": mesaj}
+        payload = {"tarih": tarih, "isim":合理, "mesaj": mesaj}
         requests.post(APPS_SCRIPT_URL, data=json.dumps(payload))
     except:
         pass
@@ -135,44 +135,4 @@ else:
     model = genai.GenerativeModel('gemini-2.5-flash')
     
     st.title("🔮 Sınav Kahini")
-    if st.button("🔒 Oturumu Kapat", use_container_width=True):
-        st.session_state["api_key_kayitli"] = ""
-        st.rerun()
-
-    st.markdown("---")
-
-    # --- 5 SEKME SİSTEMİ ---
-    sekme1, sekme2, sekme3, sekme4, sekme5 = st.tabs(["📁 Arşiv", "📢 Not Yükle", "📝 Soru Odası", "📊 Hesapla", "💬 Bölüm Chat"])
-
-    with sekme1:
-        st.subheader("📌 Ders Kütüphanesi")
-        if st.session_state["ders_notlari"]:
-            for ders, haftalar in st.session_state["ders_notlari"].items():
-                if ders in st.session_state["secilen_dersler"]:
-                    with st.expander(f"📁 {ders}", expanded=True):
-                        for hafta, veri_listesi in sorted(haftalar.items()):
-                            st.markdown(f"**🗓️ {hafta}. Hafta**")
-                            for eleman in veri_listesi:
-                                if eleman["tip"] == "metin":
-                                    st.info(eleman['icerik'])
-                                elif eleman["tip"] == "fotograf":
-                                    st.image(eleman["icerik"], use_container_width=True)
-        else:
-            st.caption("Henüz yüklenmiş not yok.")
-
-    with sekme2:
-        st.subheader("📢 Ders Notu Yükle")
-        with st.popover("➕ Dönem Derslerini Düzenle"):
-            gecici_secimler = []
-            for sinif_adi, ders_listesi in MÜFREDAT_HAVUZU.items():
-                st.markdown(f"<div class='ders-baslik'>{sinif_adi}</div>", unsafe_allow_html=True)
-                for ders in ders_listesi:
-                    if st.checkbox(ders, value=(ders in st.session_state["secilen_dersler"]), key=f"pop_{ders}"):
-                        gecici_secimler.append(ders)
-            if st.button("Listeyi Güncelle", type="primary"):
-                if gecici_secimler:
-                    st.session_state["secilen_dersler"] = gecici_secimler
-                    st.rerun()
-        
-        st.markdown("---")
-        ders_adi = st.selectbox("Ders:", options=st.
+    if st.button("🔒 Oturumu Kapat", use_
