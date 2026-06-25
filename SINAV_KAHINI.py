@@ -284,29 +284,48 @@ else:
         st.metric(label="📊 Hesaplanan Dönem Sonu Notu:", value=f"{round(donem_notu, 1)}")
         renk(f"Tahmini Harf Notu: **{harf_notu}** — {durum}")
         # --- YENİ EKLENEN CHAT BÖLÜMÜ ---
+    # --- YENİ EKLENEN CHAT BÖLÜMÜ ---
     with sekme5:
         st.subheader("💬 Bölüm Sohbeti")
         
-        # Sohbet akışı alanı
-        st.markdown("<div class='chat-container'>", unsafe_allow_html=True)
-        st.markdown("<div class='message-ai'><b>Kahin:</b> Selam! Sohbeti başlatmak ister misin?</div>", unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
-        
-        st.divider()
-        
-        # Mesaj girişi
-        chat_msg = st.text_input("Mesajını yaz ve Enter'a bas:", key="chat_input_val")
-        if chat_msg:
-            st.rerun() # Mesaj gönderildiğinde ekranı yenile
+        # 1. İSİM KISMI
+        if "kullanici_ismi" not in st.session_state:
+            isim = st.text_input("Sohbete başlamak için isminiz nedir?")
+            if st.button("Sohbete Katıl"):
+                if isim:
+                    st.session_state["kullanici_ismi"] = isim
+                    st.rerun()
+                else:
+                    st.warning("Lütfen bir isim girin.")
+        else:
+            st.write(f"Hoş geldin, **{st.session_state['kullanici_ismi']}**!")
+            
+            # 2. MESAJLAŞMA ALANI
+            # Not: Mesajları session_state içinde bir listede tutuyoruz
+            if "mesajlar" not in st.session_state: st.session_state["mesajlar"] = []
+            
+            # Mesajları göster
+            for msg in st.session_state["mesajlar"]:
+                st.write(msg)
+            
+            # 3. GÖNDERME KISMI (Enter'a basınca çalışması için bir form kullanıyoruz)
+            with st.form(key='chat_form', clear_on_submit=True):
+                yeni_mesaj = st.text_input("Mesajını yaz ve Enter'a bas:")
+                submit_button = st.form_submit_button(label='Gönder')
+                
+                if submit_button and yeni_mesaj:
+                    tam_mesaj = f"**{st.session_state['kullanici_ismi']}**: {yeni_mesaj}"
+                    st.session_state["mesajlar"].append(tam_mesaj)
+                    st.rerun()
 
-        # Yönetici Paneli (Şifreli ve daha temiz)
-        with st.expander("⚙️ Yönetici Paneli"):
-            admin_sifre = st.text_input("Şifre:", type="password", key="admin_pass_input")
-            if admin_sifre == "kahin123":
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.button("🚫 Kullanıcıyı Sustur", use_container_width=True)
-                with col2:
-                    st.button("🗑️ Sohbeti Sil", type="primary", use_container_width=True)
-            elif admin_sifre:
-                st.error("Hatalı Şifre!")
+            # 4. YÖNETİCİ PANELİ
+            st.markdown("---")
+            with st.expander("⚙️ Yönetici Paneli"):
+                sifre = st.text_input("Yönetici Şifresi:", type="password")
+                if sifre == "admin123":
+                    if st.button("🗑️ Tüm Sohbeti Temizle"):
+                        st.session_state["mesajlar"] = []
+                        st.rerun()
+                    if st.button("🚪 Çıkış Yap (İsim Değiştir)"):
+                        del st.session_state["kullanici_ismi"]
+                        st.rerun()
