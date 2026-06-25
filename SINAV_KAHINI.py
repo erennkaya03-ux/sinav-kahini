@@ -4,6 +4,7 @@ from datetime import datetime
 from pypdf import PdfReader
 import io
 from streamlit_autorefresh import st_autorefresh
+import requests  # <-- EKSİK OLAN BU! Bunu mutlaka ekle.
 
 # Sayfa Ayarları ve Mobil Görünüm Optimizasyonu
 st.set_page_config(page_title="Sınav Kahini", page_icon="🔮", layout="centered")
