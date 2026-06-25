@@ -286,17 +286,27 @@ else:
         # --- YENİ EKLENEN CHAT BÖLÜMÜ ---
     with sekme5:
         st.subheader("💬 Bölüm Sohbeti")
-        st.info("Sohbet akışı buraya gelecek.")
         
-        # Sohbet girişi ve yönetici paneli
-        st.text_input("Mesajınız:", key="chat_input_field")
-        if st.button("Gönder", key="send_chat_btn"):
-            st.success("Mesaj gönderildi!")
-            
-        st.markdown("---")
+        # Sohbet akışı alanı
+        st.markdown("<div class='chat-container'>", unsafe_allow_html=True)
+        st.markdown("<div class='message-ai'><b>Kahin:</b> Selam! Sohbeti başlatmak ister misin?</div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+        
+        st.divider()
+        
+        # Mesaj girişi
+        chat_msg = st.text_input("Mesajını yaz ve Enter'a bas:", key="chat_input_val")
+        if chat_msg:
+            st.rerun() # Mesaj gönderildiğinde ekranı yenile
+
+        # Yönetici Paneli (Şifreli ve daha temiz)
         with st.expander("⚙️ Yönetici Paneli"):
-            admin_sifre = st.text_input("Yönetici Şifresi:", type="password", key="admin_pass_field")
-            if admin_sifre == "1234": # Buraya kendi şifreni yaz
-                st.write("Yönetici yetkileri aktif.")
-                st.button("🚫 Kullanıcıyı Sustur", key="mute_btn")
-                st.button("🗑️ Sohbeti Komple Sil", type="primary", key="clear_chat_btn")
+            admin_sifre = st.text_input("Şifre:", type="password", key="admin_pass_input")
+            if admin_sifre == "kahin123":
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.button("🚫 Kullanıcıyı Sustur", use_container_width=True)
+                with col2:
+                    st.button("🗑️ Sohbeti Sil", type="primary", use_container_width=True)
+            elif admin_sifre:
+                st.error("Hatalı Şifre!")
