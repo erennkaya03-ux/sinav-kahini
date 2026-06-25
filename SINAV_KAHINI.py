@@ -6,109 +6,95 @@ import requests
 import json
 import time
 
-# Sayfa Ayarları
 st.set_page_config(page_title="Sınav Kahini", page_icon="🔮", layout="centered")
 
-# CSS Stilleri
-st.markdown("""
-<style>
-    .stButton>button { width: 100%; border-radius: 12px; height: 45px; font-weight: bold; }
-    .chat-box { padding: 12px; border-radius: 10px; margin-bottom: 8px; font-size: 14px; }
-    .chat-user { background-color: #E3F2FD; border-left: 5px solid #1E88E5; }
-    .chat-kahin { background-color: #FFF9C4; border-left: 5px solid #FBC02D; font-style: italic; }
-</style>
-""", unsafe_allow_html=True)
+# --- MÜFREDAT HAVUZU ---
+MÜFREDAT_HAVUZU = {
+    "1. SINIF": ["İktisada Giriş I", "Genel Hukuk", "Genel İşletme", "Finansal Muhasebe I"],
+    "2. SINIF": ["Finansal Okuryazarlık", "Şirketler Muhasebesi", "Stratejik Yönetim", "E-Ticaret"],
+    "3. SINIF": ["Vergi Hukuku", "Finansal Yönetim I", "Maliyet Muhasebesi I", "Muhasebe Denetimi"],
+    "4. SINIF": ["Muhasebe Standartları", "Yönetim Muhasebesi", "İnsan Kaynakları Yönetimi"]
+}
 
-# Session State Hazırlığı
+# Session State
 if "ders_notlari" not in st.session_state: st.session_state["ders_notlari"] = {}
+if "secilen_dersler" not in st.session_state: st.session_state["secilen_dersler"] = ["Finansal Muhasebe I", "Ticaret Hukuku"]
 if "api_key_kayitli" not in st.session_state: st.session_state["api_key_kayitli"] = ""
 if "chat_isim" not in st.session_state: st.session_state["chat_isim"] = ""
-if "secilen_dersler" not in st.session_state: st.session_state["secilen_dersler"] = ["Finansal Muhasebe I", "Finansal Muhasebe II", "Ticaret Hukuku"]
 
-# Bağlantılar
-SHEETS_YENI_LINK = "https://script.google.com/macros/s/AKfycbzExJPw5JDjfzInJ3_sPwNfv5en7aIVsl29vMHCtQlLIJq1fgZmxZrDDi6Y4SaYw6XuQA/exec"
-SHEET_ID = "1qjPw6aNw1PFREblbFCd8ZZ5LnlxnmBLbDMLuV5dMb1I"
-SHEET_CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&cache_bust={int(time.time())}"
-
+# --- FONKSİYONLAR ---
 def buluta_mesaj_yaz(tarih, isim, mesaj):
-    try: requests.post(SHEETS_YENI_LINK, data=json.dumps({"tarih": tarih, "isim": isim, "mesaj": mesaj}))
+    try: requests.post("https://script.google.com/macros/s/AKfycbzExJPw5JDjfzInJ3_sPwNfv5en7aIVsl29vMHCtQlLIJq1fgZmxZrDDi6Y4SaYw6XuQA/exec", data=json.dumps({"tarih": tarih, "isim": isim, "mesaj": mesaj}))
     except: pass
 
-# Giriş Ekranı
+# --- GİRİŞ ---
 if not st.session_state["api_key_kayitli"]:
     st.title("🔮 Sınav Kahini Giriş")
-    key = st.text_input("🔑 API Key Girin:", type="password", key="login_key")
-    if st.button("Sisteme Giriş Yap", key="btn_login"):
-        if key:
-            st.session_state["api_key_kayitli"] = key.strip()
-            st.rerun()
+    key = st.text_input("API Key:", type="password", key="login_key")
+    if st.button("Giriş Yap", key="btn_log"):
+        st.session_state["api_key_kayitli"] = key
+        st.rerun()
 else:
     genai.configure(api_key=st.session_state["api_key_kayitli"])
     model = genai.GenerativeModel('gemini-2.5-flash')
     
     st.title("🔮 Sınav Kahini")
-    if st.button("🔒 Oturumu Kapat", key="btn_logout"):
-        st.session_state["api_key_kayitli"] = ""
-        st.rerun()
-
+    
     tab1, tab2, tab3, tab4, tab5 = st.tabs(["📁 Arşiv", "📢 Not Yükle", "📝 Soru", "📊 Hesapla", "💬 Chat"])
 
     with tab1:
-        st.subheader("📌 Ders Kütüphanesi")
         for ders in st.session_state["secilen_dersler"]:
             with st.expander(f"📁 {ders}"):
                 if ders in st.session_state["ders_notlari"]:
                     for h, v in st.session_state["ders_notlari"][ders].items():
-                        st.markdown(f"**🗓️ {h}. Hafta**")
-                        for i in v: st.info(i['icerik'])
-                else: st.caption("Not yüklenmemiş.")
+                        st.info(f"Hafta {h}: {v}")
+                else: st.caption("Not yok.")
 
     with tab2:
-        ders = st.selectbox("Ders:", st.session_state["secilen_dersler"], key="upload_ders")
-        hafta = st.number_input("Hafta:", 1, 14, 1, key="upload_hafta")
-        not_metni = st.text_area("Notunuz:", key="upload_text")
-        if st.button("Gönder", key="btn_upload"):
+        with st.popover("➕ Dönem Derslerini Düzenle"):
+            gecici = []
+            for sinif, liste in MÜFREDAT_HAVUZU.items():
+                st.markdown(f"**{sinif}**")
+                for d in liste:
+                    if st.checkbox(d, value=(d in st.session_state["secilen_dersler"]), key=f"chk_{d}"):
+                        gecici.append(d)
+            if st.button("Kaydet", key="btn_save_ders"):
+                st.session_state["secilen_dersler"] = gecici
+                st.rerun()
+        
+        ders = st.selectbox("Ders:", st.session_state["secilen_dersler"], key="up_ders")
+        hafta = st.number_input("Hafta:", 1, 14, 1, key="up_hafta")
+        not_t = st.text_area("Not:", key="up_not")
+        if st.button("Gönder", key="btn_up"):
             if ders not in st.session_state["ders_notlari"]: st.session_state["ders_notlari"][ders] = {}
-            if hafta not in st.session_state["ders_notlari"][ders]: st.session_state["ders_notlari"][ders][hafta] = []
-            st.session_state["ders_notlari"][ders][hafta].append({"tip": "metin", "icerik": not_metni})
+            st.session_state["ders_notlari"][ders][hafta] = not_t
             st.success("Eklendi!")
 
-    with tab3:
-        ders = st.selectbox("Ders:", st.session_state["secilen_dersler"], key="q_ders")
-        if st.button("Soru Üret", key="btn_q"):
-            st.write(model.generate_content(f"{ders} dersinden bir sınav sorusu üret").text)
-
     with tab4:
-        st.subheader("🎯 Hedef Hesapla")
-        vize = st.slider("Vize?", 0, 100, 50, key="vize_s")
-        hedef = st.selectbox("Hedef:", ["AA", "BA", "BB", "CC"], key="hedef_s")
-        baraj = {'AA':85,'BA':80,'BB':75,'CC':65}[hedef]
-        st.info(f"Finalden en az {round((baraj - (vize*0.4))/0.6, 1)} alman lazım.")
+        st.warning("⚠️ ÖNEMLİ: Final barajı %50'dir. Çan eğrisi hesaplaması okulun belirlediği ortalamaya göre değişir.")
+        vize = st.slider("Vize Notu", 0, 100, 50, key="v_s")
+        v_oran = st.slider("Vize Yüzdesi", 10, 90, 40, key="v_o")
+        sinif_ort = st.slider("Sınıf Ortalaması", 0, 100, 50, key="s_o")
+        hedef = st.selectbox("Hedef Harf", ["AA", "BA", "BB", "CB", "CC"], key="h_s")
+        
+        baraj = {'AA':85,'BA':80,'BB':75,'CB':70,'CC':65}[hedef]
+        gereken = round((baraj - (vize * (v_oran/100))) / ((100-v_oran)/100), 1)
+        st.success(f"Hedefin olan {hedef} için Finalden alman gereken: **{gereken}**")
 
     with tab5:
         if not st.session_state["chat_isim"]:
-            isim = st.text_input("Nickname:", key="chat_nick")
+            isim = st.text_input("İsim:", key="nick")
             if st.button("Katıl", key="btn_join"):
                 st.session_state["chat_isim"] = isim
                 st.rerun()
         else:
             try:
-                df = pd.read_csv(SHEET_CSV_URL)
-                for _, m in df.tail(20).iterrows():
-                    cls = "chat-kahin" if m['isim'] == "🔮 Kahin Bot" else "chat-user"
-                    st.markdown(f"<div class='chat-box {cls}'><b>{m['isim']}:</b> {m['mesaj']}</div>", unsafe_allow_html=True)
-            except: st.caption("Henüz mesaj yok.")
+                df = pd.read_csv(f"https://docs.google.com/spreadsheets/d/1qjPw6aNw1PFREblbFCd8ZZ5LnlxnmBLbDMLuV5dMb1I/gviz/tq?tqx=out:csv&cache_bust={time.time()}")
+                for _, m in df.tail(15).iterrows():
+                    st.markdown(f"**{m['isim']}**: {m['mesaj']}")
+            except: pass
             
             yeni = st.text_input("Mesaj:", key="chat_msg")
             if st.button("Gönder", key="btn_chat"):
                 buluta_mesaj_yaz(datetime.now().strftime("%H:%M"), st.session_state["chat_isim"], yeni)
-                if "@kahin" in yeni:
-                    buluta_mesaj_yaz("12:00", "🔮 Kahin Bot", model.generate_content(yeni).text)
                 st.rerun()
-            
-            with st.expander("⚙️ Yönetici"):
-                sifre = st.text_input("Şifre", type="password", key="admin_pass")
-                if st.button("Sıfırla", key="btn_reset"):
-                    if sifre == "kahin123":
-                        buluta_mesaj_yaz("CLEAR_CHAT", "SYSTEM", "ALL")
-                        st.rerun()
