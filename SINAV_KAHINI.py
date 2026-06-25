@@ -3,6 +3,7 @@ import google.generativeai as genai
 from datetime import datetime
 from pypdf import PdfReader
 import io
+from streamlit_autorefresh import st_autorefresh
 
 # Sayfa Ayarları ve Mobil Görünüm Optimizasyonu
 st.set_page_config(page_title="Sınav Kahini", page_icon="🔮", layout="centered")
@@ -284,53 +285,35 @@ else:
         st.metric(label="📊 Hesaplanan Dönem Sonu Notu:", value=f"{round(donem_notu, 1)}")
         renk(f"Tahmini Harf Notu: **{harf_notu}** — {durum}")
         # --- YENİ EKLENEN CHAT BÖLÜMÜ ---
-  from streamlit_autorefresh import st_autorefresh
-import requests
-
-# Sohbeti 1 saniyede bir yeniler
-st_autorefresh(interval=1000, key="datarefresh")
-
 with sekme5:
     st.subheader("💬 Canlı Bölüm Sohbeti")
     
-    # 1. İsim girişi (WhatsApp'taki profil adı gibi)
+    # 1. İsmi kaydet
     if "kullanici_ismi" not in st.session_state:
         isim = st.text_input("Sohbete girmek için isminiz:")
-        if st.button("Giriş Yap"):
+        if st.button("Sohbete Katıl"):
             st.session_state["kullanici_ismi"] = isim
             st.rerun()
     else:
-        st.write(f"Bağlı kullanıcı: **{st.session_state['kullanici_ismi']}**")
+        # 1 saniyede bir sayfayı yeniler
+        st_autorefresh(interval=1000, key="chat_refresh")
         
-        # 2. Mesajları Çek (Senin linkin üzerinden)
-        url = "https://script.google.com/macros/s/AKfycbzExJPw5JDjfzInJ3_sPwNfv5en7aIVsl29vMHCtQlLIJq1fgZmxZrDDi6Y4SaYw6XuQA/exec"
+        st.write(f"Kullanıcı: **{st.session_state['kullanici_ismi']}**")
+        
+        # 2. Mesajları Google Sheets'ten çek
         try:
+            url = "https://script.google.com/macros/s/AKfycbzgEnk0Bu94xOPFF7w-jBlYhiy6PzAOST0W_6VBjIIgdJhlvImjtSWt4qv4E1jENLyxLQ/exec"
             cevap = requests.get(url).json()
-            st.markdown("<div style='height: 300px; overflow-y: scroll; padding: 10px; background: #f0f2f6; border-radius: 10px;'>", unsafe_allow_html=True)
-            for mesaj in cevap:
-                # WhatsApp stili mesaj balonları
-                align = "flex-end" if mesaj['isim'] == st.session_state["kullanici_ismi"] else "flex-start"
-                color = "#DCF8C6" if mesaj['isim'] == st.session_state["kullanici_ismi"] else "#FFFFFF"
-                st.markdown(f"""
-                    <div style='display:flex; justify-content:{align}; margin-bottom:5px;'>
-                        <div style='background:{color}; padding:8px 12px; border-radius:15px; max-width:70%;'>
-                            <small style='color:gray;'>{mesaj['isim']}</small><br>{mesaj['mesaj']}
-                        </div>
-                    </div>
-                """, unsafe_allow_html=True)
-            st.markdown("</div>", unsafe_allow_html=True)
+            
+            # Mesaj kutusu alanı
+            for m in cevap:
+                st.markdown(f"**{m['isim']}**: {m['mesaj']}")
         except:
-            st.error("Mesajlar yüklenirken bir hata oluştu.")
-
-        # 3. Mesaj Gönderme (WhatsApp stili)
-        with st.form("mesaj_formu", clear_on_submit=True):
-            yeni_mesaj = st.text_input("Bir şeyler yaz...")
+            st.warning("Sohbet yükleniyor...")
+            
+        # 3. Mesaj gönder
+        with st.form("chat_form", clear_on_submit=True):
+            yeni_mesaj = st.text_input("Mesaj yaz:")
             if st.form_submit_button("Gönder"):
                 requests.post(url, json={"isim": st.session_state["kullanici_ismi"], "mesaj": yeni_mesaj})
-                st.rerun()
-
-        # 4. Yönetici Paneli
-        with st.expander("⚙️ Yönetici"):
-            if st.button("🗑️ Sohbeti Temizle"):
-                requests.post(url, json={"action": "clear"})
                 st.rerun()
