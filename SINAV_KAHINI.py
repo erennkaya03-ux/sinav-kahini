@@ -175,8 +175,4 @@ else:
                     st.rerun()
         
         st.markdown("---")
-        ders_adi = st.selectbox("Ders:", options=st.session_state["secilen_dersler"])
-        secilen_hafta = st.number_input("Hafta:", min_value=1, max_value=14, value=1)
-        ham_not = st.text_area("📝 Not ekleyin:")
-        if st.button("🚀 Gönder", use_container_width=True):
-            if ders_adi not in st.session_state["ders_notlari"]:
+        ders_adi = st.selectbox("Ders:", options=st.
