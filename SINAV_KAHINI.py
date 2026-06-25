@@ -5,7 +5,6 @@ import pandas as pd
 import requests
 import json
 import time
-import random
 
 # Sayfa Ayarları
 st.set_page_config(page_title="Sınav Kahini", page_icon="🔮", layout="centered")
@@ -38,8 +37,8 @@ def buluta_mesaj_yaz(tarih, isim, mesaj):
 # Giriş Ekranı
 if not st.session_state["api_key_kayitli"]:
     st.title("🔮 Sınav Kahini Giriş")
-    key = st.text_input("🔑 API Key Girin:", type="password")
-    if st.button("Sisteme Giriş Yap"):
+    key = st.text_input("🔑 API Key Girin:", type="password", key="login_key")
+    if st.button("Sisteme Giriş Yap", key="btn_login"):
         if key:
             st.session_state["api_key_kayitli"] = key.strip()
             st.rerun()
@@ -48,7 +47,7 @@ else:
     model = genai.GenerativeModel('gemini-2.5-flash')
     
     st.title("🔮 Sınav Kahini")
-    if st.button("🔒 Oturumu Kapat"):
+    if st.button("🔒 Oturumu Kapat", key="btn_logout"):
         st.session_state["api_key_kayitli"] = ""
         st.rerun()
 
@@ -57,7 +56,7 @@ else:
     with tab1:
         st.subheader("📌 Ders Kütüphanesi")
         for ders in st.session_state["secilen_dersler"]:
-            with st.expander(f"📁 {ders}", expanded=True):
+            with st.expander(f"📁 {ders}"):
                 if ders in st.session_state["ders_notlari"]:
                     for h, v in st.session_state["ders_notlari"][ders].items():
                         st.markdown(f"**🗓️ {h}. Hafta**")
@@ -65,10 +64,10 @@ else:
                 else: st.caption("Not yüklenmemiş.")
 
     with tab2:
-        ders = st.selectbox("Ders:", st.session_state["secilen_dersler"])
-        hafta = st.number_input("Hafta:", 1, 14, 1)
-        not_metni = st.text_area("Notunuz:")
-        if st.button("Gönder"):
+        ders = st.selectbox("Ders:", st.session_state["secilen_dersler"], key="upload_ders")
+        hafta = st.number_input("Hafta:", 1, 14, 1, key="upload_hafta")
+        not_metni = st.text_area("Notunuz:", key="upload_text")
+        if st.button("Gönder", key="btn_upload"):
             if ders not in st.session_state["ders_notlari"]: st.session_state["ders_notlari"][ders] = {}
             if hafta not in st.session_state["ders_notlari"][ders]: st.session_state["ders_notlari"][ders][hafta] = []
             st.session_state["ders_notlari"][ders][hafta].append({"tip": "metin", "icerik": not_metni})
@@ -76,19 +75,20 @@ else:
 
     with tab3:
         ders = st.selectbox("Ders:", st.session_state["secilen_dersler"], key="q_ders")
-        if st.button("Soru Üret"):
+        if st.button("Soru Üret", key="btn_q"):
             st.write(model.generate_content(f"{ders} dersinden bir sınav sorusu üret").text)
 
     with tab4:
         st.subheader("🎯 Hedef Hesapla")
-        vize = st.slider("Vize?", 0, 100, 50)
-        hedef = st.selectbox("Hedef:", ["AA", "BA", "BB", "CC"])
-        st.info(f"Finalden en az {round((({'AA':85,'BA':80,'BB':75,'CC':65}[hedef] - (vize*0.4))/0.6), 1)} alman lazım.")
+        vize = st.slider("Vize?", 0, 100, 50, key="vize_s")
+        hedef = st.selectbox("Hedef:", ["AA", "BA", "BB", "CC"], key="hedef_s")
+        baraj = {'AA':85,'BA':80,'BB':75,'CC':65}[hedef]
+        st.info(f"Finalden en az {round((baraj - (vize*0.4))/0.6, 1)} alman lazım.")
 
     with tab5:
         if not st.session_state["chat_isim"]:
-            isim = st.text_input("Nickname:")
-            if st.button("Katıl"):
+            isim = st.text_input("Nickname:", key="chat_nick")
+            if st.button("Katıl", key="btn_join"):
                 st.session_state["chat_isim"] = isim
                 st.rerun()
         else:
@@ -99,15 +99,16 @@ else:
                     st.markdown(f"<div class='chat-box {cls}'><b>{m['isim']}:</b> {m['mesaj']}</div>", unsafe_allow_html=True)
             except: st.caption("Henüz mesaj yok.")
             
-            yeni = st.text_input("Mesaj:")
-            if st.button("Gönder"):
+            yeni = st.text_input("Mesaj:", key="chat_msg")
+            if st.button("Gönder", key="btn_chat"):
                 buluta_mesaj_yaz(datetime.now().strftime("%H:%M"), st.session_state["chat_isim"], yeni)
                 if "@kahin" in yeni:
                     buluta_mesaj_yaz("12:00", "🔮 Kahin Bot", model.generate_content(yeni).text)
                 st.rerun()
             
             with st.expander("⚙️ Yönetici"):
-                if st.text_input("Şifre", type="password") == "kahin123":
-                    if st.button("Sıfırla"):
+                sifre = st.text_input("Şifre", type="password", key="admin_pass")
+                if st.button("Sıfırla", key="btn_reset"):
+                    if sifre == "kahin123":
                         buluta_mesaj_yaz("CLEAR_CHAT", "SYSTEM", "ALL")
                         st.rerun()
