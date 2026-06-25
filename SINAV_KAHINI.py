@@ -293,29 +293,20 @@ with sekme5:
     st.subheader("💬 Canlı Sohbet")
     url = "https://script.google.com/macros/s/AKfycbwfyEIa0OFcnhrcHaIQuTZX5AMRIA4aT0rggEhZlIoTcAc98PPwaB4c5CkRIuVclfEHPQ/exec"
     
-    # İsim alma
-    if "kullanici_ismi" not in st.session_state:
-        st.session_state["kullanici_ismi"] = st.text_input("İsmin:")
-    else:
-        st.write(f"Kullanıcı: **{st.session_state['kullanici_ismi']}**")
-        
-        # MESAJLARI ÇEK
-        try:
-            import time
-            # Linkin sonuna ?t=zaman ekleyerek tarayıcıyı zorla yeniliyoruz
-            r = requests.get(url + "?t=" + str(time.time()), timeout=10)
-            mesajlar = r.json()
-            
-            if isinstance(mesajlar, list): # Eğer gelen veri bir listeyse
+    # ... (İsim kısmı aynı kalsın) ...
+    
+    try:
+        r = requests.get(url)
+        # BURAYA BAK: Gelen cevap JSON mı değil mi?
+        if r.status_code == 200:
+            try:
+                mesajlar = r.json()
                 for m in mesajlar:
-                    st.markdown(f"**{m.get('isim', 'Anonim')}**: {m.get('mesaj', '')}")
-            else:
-                st.write("Veri formatı hatalı.")
-        except Exception as e:
-            st.error(f"Mesajlar yüklenemedi: {e}")
-            
-        # MESAJ GÖNDER
-        yeni = st.text_input("Mesajın:")
-        if st.button("Gönder"):
-            requests.post(url, json={"isim": st.session_state["kullanici_ismi"], "mesaj": yeni})
-            st.rerun()
+                    st.markdown(f"**{m.get('isim')}**: {m.get('mesaj')}")
+            except:
+                st.error("Sunucudan veri geldi ama JSON değil!")
+                st.write("Gelen ham veri:", r.text) # Hatanın ne olduğunu ekrana yazdır
+        else:
+            st.error(f"Sunucu hatası: {r.status_code}")
+    except Exception as e:
+        st.error(f"Bağlantı hatası: {e}")
