@@ -5,6 +5,7 @@ import pandas as pd
 import requests
 import json
 import time
+import random
 
 # Sayfa Ayarları ve Mobil Görünüm Optimizasyonu
 st.set_page_config(page_title="Sınav Kahini", page_icon="🔮", layout="centered")
@@ -111,7 +112,6 @@ if "secilen_dersler" not in st.session_state:
 SHEETS_YENI_LINK = "https://script.google.com/macros/s/AKfycbzExJPw5JDjfzInJ3_sPwNfv5en7aIVsl29vMHCtQlLIJq1fgZmxZrDDi6Y4SaYw6XuQA/exec"
 SHEET_ID = "1qjPw6aNw1PFREblbFCd8ZZ5LnlxnmBLbDMLuV5dMb1I"
 
-# Google'ın verileri önbelleğe (cache) alıp eskiyi göstermesini engellemek için her saniye değişen bir parametre ekliyoruz
 anlik_zaman = int(time.time())
 SHEET_CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&cache_bust={anlik_zaman}"
 
@@ -123,19 +123,63 @@ def buluta_mesaj_yaz(tarih, isim, mesaj):
     except:
         pass
 
-# --- GİRİŞ KONTROLÜ ---
-if not st.session_state["api_key_kayitli"]:
+# --- GİRİŞ PANELİ VE ANA UYGULAMA MANTIĞI ---
+if st.session_state["api_key_kayitli"] == "":
     st.title("🔮 Sınav Kahini Giriş")
     st.subheader("Hoş geldiniz")
     girilen_key = st.text_input("🔑 Gemini API Key Girin:", type="password")
     if st.button("Sisteme Giriş Yap 🚀", use_container_width=True):
         if girilen_key:
-            st.session_state["api_key_kayitli"] = girilen_key
+            st.session_state["api_key_kayitli"] = girilen_key.strip()
+            st.success("Giriş başarılı! Sayfa yükleniyor...")
+            time.sleep(0.5)
             st.rerun()
 else:
-    genai.configure(api_key=st.session_state["api_key_kayitli"])
-    model = genai.GenerativeModel('gemini-2.5-flash')
+    # Yapay zekayı ayağa kaldırıyoruz
+    try:
+        genai.configure(api_key=st.session_state["api_key_kayitli"])
+        model = genai.GenerativeModel('gemini-2.5-flash')
+    except:
+        st.error("API Anahtarı yapılandırılamadı. Lütfen geçerli bir anahtar girin.")
     
     st.title("🔮 Sınav Kahini")
     if st.button("🔒 Oturumu Kapat", use_container_width=True):
-        st.session_state
+        st.session_state["api_key_kayitli"] = ""
+        st.rerun()
+
+    st.markdown("---")
+
+    # --- 5 SEKME SİSTEMİ ---
+    sekme1, sekme2, sekme3, sekme4, sekme5 = st.tabs(["📁 Arşiv", "📢 Not Yükle", "📝 Soru Odası", "📊 Hesapla", "💬 Bölüm Chat"])
+
+    # SEKME 1: ARŞİV
+    with sekme1:
+        st.subheader("📌 Ders Kütüphanesi")
+        if st.session_state["ders_notlari"]:
+            for ders, haftalar in st.session_state["ders_notlari"].items():
+                if ders in st.session_state["secilen_dersler"]:
+                    with st.expander(f"📁 {ders}", expanded=True):
+                        for hafta, veri_listesi in sorted(haftalar.items()):
+                            st.markdown(f"**🗓️ {hafta}. Hafta**")
+                            for eleman in veri_listesi:
+                                if eleman["tip"] == "metin":
+                                    st.info(eleman['icerik'])
+                                elif eleman["tip"] == "fotograf":
+                                    st.image(eleman["icerik"], use_container_width=True)
+        else:
+            st.caption("Henüz yüklenmiş not yok.")
+
+    # SEKME 2: NOT YÜKLE
+    with sekme2:
+        st.subheader("📢 Ders Notu Yükle")
+        with st.popover("➕ Dönem Derslerini Düzenle"):
+            gecici_secimler = []
+            for sinif_adi, ders_listesi in MÜFREDAT_HAVUZU.items():
+                st.markdown(f"<div class='ders-baslik'>{sinif_adi}</div>", unsafe_allow_html=True)
+                for ders in ders_listesi:
+                    if st.checkbox(ders, value=(ders in st.session_state["secilen_dersler"]), key=f"pop_{ders}"):
+                        gecici_secimler.append(ders)
+            if st.button("Listeyi Güncelle", type="primary"):
+                if gecici_secimler:
+                    st.session_state["secilen_dersler"] = gecici_secimler
+                    st
