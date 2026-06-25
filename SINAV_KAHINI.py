@@ -4,6 +4,7 @@ from datetime import datetime
 import pandas as pd
 import requests
 import json
+import time
 
 # Sayfa Ayarları ve Mobil Görünüm Optimizasyonu
 st.set_page_config(page_title="Sınav Kahini", page_icon="🔮", layout="centered")
@@ -207,53 +208,6 @@ else:
     # --- SEKME 5: SOHBET ODASI ---
     with sekme5:
         st.subheader("💬 Bölüm Ortak Sohbet Odası")
-        st.caption("Aynı linki kullanan herkes buraya yazabilir. Yapay zekayı çağırmak için mesajın başına **@kahin** yazın!")
+        st.caption("Aynı linki kullanan herkes buraya yazabilir. Yapay zekayı çağırmak için mesajın başına @kahin yazın!")
         
-        if not st.session_state["chat_isim"]:
-            takma_ad = st.text_input("💬 Sohbet odası için bir Nickname (İsim) girin:", placeholder="Örn: Ahmet_100")
-            if st.button("Sohbete Katıl 🚀"):
-                if takma_ad:
-                    st.session_state["chat_isim"] = takma_ad
-                    st.rerun()
-        else:
-            st.write(f"Kullanıcı Adın: **{st.session_state['chat_isim']}**")
-            
-            # Google Sheet'ten güncel verileri çekme denemesi
-            try:
-                df = pd.read_csv(SHEET_CSV_URL)
-                if not df.empty:
-                    mesajlar = df.tail(30).to_dict(orient="records")
-                else:
-                    mesajlar = []
-            except:
-                mesajlar = []
-
-            st.markdown("---")
-            if not mesajlar:
-                st.caption("Henüz ortak mesaj yok, ilk mesajı sen yaz kanka veya sayfayı yenile!")
-            else:
-                for m in mesajlar:
-                    cls = "chat-kahin" if str(m.get('isim')) == "🔮 Kahin Bot" else "chat-user"
-                    st.markdown(f"<div class='chat-box {cls}'><b>{m.get('isim', 'Anonim')}:</b> {m.get('mesaj', '')}</div>", unsafe_allow_html=True)
-            st.markdown("---")
-
-            # Hatayı çözen kritik düzeltme burası kanka: st.text_input yapıldı
-            yeni_m = st.text_input("✉️ Mesajınızı yazın:", placeholder="Beyler vize soruları nasıldı?", key="chat_input")
-            
-            if st.button("Gönder ✉️", use_container_width=True):
-                if yeni_m:
-                    zaman = datetime.now().strftime("%H:%M")
-                    
-                    # Doğrudan buluta yazıyoruz
-                    buluta_mesaj_yaz(zaman, st.session_state["chat_isim"], yeni_m)
-
-                    # --- YAPAY ZEKA BOT TETİKLEMESİ ---
-                    if yeni_m.strip().lower().startswith("@kahin"):
-                        soru = yeni_m.replace("@kahin", "").strip()
-                        with st.spinner("🔮 Kahin Bot gruba yazıyor..."):
-                            bot_cevap = model.generate_content(f"Sen bir üniversite grubundaki akıllı asistansın. Öğrencinin şu sorusuna gruptakilerin anlayacağı samimi ama net bir cevap yaz: {soru}").text
-                            buluta_mesaj_yaz(zaman, "🔮 Kahin Bot", bot_cevap)
-                    st.rerun()
-            
-            if st.button("🔄 Sohbeti Yenile"):
-                st.rerun()
+        # ANLIK YENİLEME: Sayfa her 4 saniyede bir arkada sess
