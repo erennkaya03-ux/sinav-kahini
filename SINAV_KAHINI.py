@@ -5,7 +5,7 @@ from pypdf import PdfReader
 import io
 
 # Sayfa Ayarları ve Mobil Görünüm Optimizasyonu
-st.set_page_config(page_title="Sınav Kahini", page_icon="🔮", layout="centered")
+st.set_page_config(page_title="Sınav Yardimcisi", page_icon="🔮", layout="centered")
 
 # --- MOBİL ARAYÜZ STİL AYARLARI (CSS) ---
 st.markdown("""
@@ -296,3 +296,22 @@ with sekme5:
         if sifre == "senin_sifren": # Buraya belirlediğin şifreyi yaz
             if st.button("🚫 Sustur"): st.write("Kullanıcı susturuldu.")
             if st.button("🗑️ Sohbeti Sil"): st.write("Sohbet silindi.")
+                # --- SOHBET BÖLÜMÜ (Kodun en sonuna, başka hiçbir şeye dokunmadan ekle) ---
+with sekme5:
+    st.subheader("💬 Bölüm Sohbeti")
+    st.write("Sohbet akışı buraya gelecek.")
+    
+    # Yenileme butonu (otomatik çalışması için kütüphane gerekir, şimdilik bu en garantisi)
+    if st.button("🔄 Sohbeti Yenile"):
+        st.rerun()
+        
+    st.text_input("Mesajınız:", key="chat_input")
+    if st.button("Gönder"):
+        st.success("Mesaj gönderildi!")
+        
+    st.markdown("---")
+    with st.expander("⚙️ Yönetici Paneli"):
+        admin_sifre = st.text_input("Yönetici Şifresi:", type="password")
+        if admin_sifre == "1234": # Şifreni buraya yaz
+            st.button("🚫 Kullanıcıyı Sustur")
+            st.button("🗑️ Sohbeti Komple Sil", type="primary")
